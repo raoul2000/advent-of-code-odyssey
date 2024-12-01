@@ -66,3 +66,32 @@
 (solution-1)
 ;; => 1666427 ⭐
 
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;; associate for each number in left list the number of occurence in the right list
+;; sum them all
+
+(comment
+  ;; simple way
+  (count (filter (partial = 3) [1 3 5 3 6]))
+
+  ;; using frequencies
+  (get (frequencies [1 3 5 3 6]) 3)
+  (get (frequencies [1 3 5 3 6]) 11)
+
+  (apply + '(1 nil 2)) ;; we must remove nils
+
+  ;;
+  )
+
+(defn solution-2 []
+  (let [[left-xs right-xs] (read-input (slurp "resources/day_1.txt"))
+        right-freq         (frequencies right-xs)]
+    (->> (map #(vector % (get right-freq %))  left-xs)
+         (filter second)
+         (map (partial apply *))
+         (apply +))))
+
+(solution-2)
+;; => 24316233 ⭐
