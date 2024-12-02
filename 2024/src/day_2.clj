@@ -68,3 +68,32 @@
 (solution-1)
 ;; => 236 ⭐
 
+
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; an unsafe report can be considered as safe if it meets safety requirement
+;; by removing one level
+
+(defn make-derived-report [report]
+  (map-indexed (fn [i _n]
+                 (keep-indexed #(when-not (= i %1) %2) report)) report))
+
+(defn strictly-safe [report]
+  (and (or (all-increasing? report)
+           (all-decreasing? report))
+       (->> report
+            compute-level-diff
+            (every? valid-level-diff?))))
+
+(defn safe-report-with-tolerance [report]
+  (or (strictly-safe report)
+      (some strictly-safe (make-derived-report report))))
+
+(defn solution-2 []
+  (->> (slurp "resources/day_2.txt")
+       read-input
+       (filter safe-report-with-tolerance)
+       count))
+
+(solution-2)
+;; => 308 ⭐
