@@ -55,6 +55,12 @@ MXMXAXMASX")
   [grid]
   [(count (first grid)) (count grid)])
 
+(defn in-grid?
+  "Return TRUE if pos [x y] is inside the given `grid`"
+  [grid [x y]]
+  (let [[col-count line-count] (size grid)]
+    (and (< -1 x col-count)
+         (< -1 y line-count))))
 
 (comment
 
@@ -89,28 +95,70 @@ MXMXAXMASX")
     (for [x (range 1 col-count)]
       [x 0]))
 
-  ;; all diagonal top-left -> bottom-right segment starting pos 
+  ;; all diagonal\ segment starting pos 
   (let [[col-count line-count] (size g)]
     (apply conj
-           (mapv #(vector 0 %) (range (dec line-count) -1 -1))
-           (mapv #(vector % 0) (range 1 col-count))))
-  
+           (mapv #(vector 0 %) (range 0 line-count))   ;; right vertical
+           (mapv #(vector % 0) (range 1 col-count))))  ;; top horiz
 
+  ;; all diagonal /  segment starting pos   
+  (let [[col-count line-count] (size g)]
+    (apply conj
+           (mapv #(vector % (dec line-count)) (range 0 col-count))    ;; bottom horiz
+           (mapv #(vector (dec col-count) %)  (range 0 line-count)))) ;; right vertical
 
-  (defn in-grid? [grid [x y]]
-    (let [[col-count line-count] (size grid)]
-      (and (< -1 x col-count)
-           (< -1 y line-count))))
-  
-  (in-grid? g [0 0])
-  (in-grid? g [0 9])
-  (in-grid? g [0 10])
-  (in-grid? g [10 9])
-  (in-grid? g [9 9])
 
   ;; given a diagonal staring pos find all pos in the segment
   (->> (map (fn [delta]
               [(+ 0 delta) (+ 0 delta)])  (range 0 20))
        (take-while #(in-grid? g %)))
+
+  /
+  (defn create-segment-backslash
+    "create all pos for segment \\ starting at `[x y]`"
+    [grid [x y]]
+    (->> (map (fn [delta]
+                [(+ x delta) (+ y delta)])  (range))
+         (take-while #(in-grid? grid %))))
+
+  (create-segment-backslash g [0 0])
+  (create-segment-backslash g [0 1])
+  (create-segment-backslash g [5 0])
+  (create-segment-backslash g [10 0])
+
+  (defn create-segment-slash
+    "create all pos for segment / starting at `[x y]`"
+    [grid [x y]]
+    (->> (map (fn [delta]
+                [(- x delta) (+ y delta)])  (range))
+         (take-while #(in-grid? grid %))))
+
+  (create-segment-slash g [3 0])
+  (create-segment-slash g [3 0])
+
+
+  (let [[col-count line-count] (size g)]
+    (mapv #(vector 0 %) (range 0 line-count)))
+
+
+  (defn create-segment
+    "Given a grid and a seq of [x y] pos, return a seq of chars at pos"
+    [grid pos-xs]
+    (apply str (mapv #(char-at grid %) pos-xs)))
+
+  (defn count-xmas [s]
+    (+ (count (re-seq #"XMAS" s))
+       (count (re-seq #"SAMX" s))))
+
+  (count-xmas "..XMAS..XM..XMAS..SAMX..XMAS")
   ;;
+  )
+
+(defn segments-backslash-starting-pos
+  "all diagonal \\ segment starting pos "
+  [grid]
+  (let [[col-count line-count] (size grid)]
+    (apply conj
+           (mapv #(vector 0 %) (range 0 line-count))   ;; right vertical
+           (mapv #(vector % 0) (range 1 col-count))))  ;; top horiz
   )
