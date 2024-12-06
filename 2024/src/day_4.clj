@@ -107,3 +107,46 @@ MXMXAXMASX")
 
 (solution-1)
 ;; => 2358 ⭐
+
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; searching for MAS (or SAM) in form of an X !
+;; the previous algo cannot be used 😭
+;; So we will iterate over each A, from [1 1] to [(x-max - 1) (y-max - 1)] and then search in each diagonal
+;; directions.
+
+
+(defn pos-to-scan [grid]
+  (let [[col-count line-count] (size grid)]
+    (for [x (range 1 (dec col-count))
+          y (range 1 (dec line-count))
+          :when (= \A (char-at grid [x y]))]
+      [x y])))
+
+(defn extract-diag-backslash [[x y]]
+  (vector [(dec x) (dec y)]
+          [x  y]
+          [(inc x)  (inc y)]))
+
+(defn extract-diag-slash [[x y]]
+  (vector [(dec x) (inc y)]
+          [x  y]
+          [(inc x)  (dec y)]))
+
+(defn count-mas [segment-xs]
+  (if (every? #(or (= % "MAS") (= % "SAM")) segment-xs) 1 0))
+
+
+(defn solution-2 []
+  (let [grid (parse-input (slurp "resources/day_4.txt"))]
+    (->> (pos-to-scan grid)
+         (map #(vector (extract-diag-backslash %)
+                       (extract-diag-slash %)))
+         (map (fn [[seg-bs seg-sl]]
+                (vector (create-segment grid seg-bs)
+                        (create-segment grid seg-sl))))
+         (map count-mas)
+         (apply +))))
+
+(solution-2)
+;; => 1737 ⭐
