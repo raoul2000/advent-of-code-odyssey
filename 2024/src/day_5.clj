@@ -181,4 +181,67 @@
 
 ;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; For each of the incorrectly-ordered updates, 
+;; use the page ordering rules to put the page numbers in the right order
 
+;; finding the incorrectly oredered updates can be done <ith part of solution 1
+;; but then ...
+;; .... we must find which page numbers are breaking rule and switch their position to
+;; get a correctly-ordered updates.
+
+(comment
+
+  (def page-update [97,75,47,61,53])
+
+  ;; list of pairs to test : 
+  ;; 
+  ;; [97 75] [97 47] [97 61] [97 53]
+  ;; [75 47] [75 61] [75 53]
+  ;; 
+
+  (reduce (fn [res p]
+            (conj res (map #(vector p %) (last (partition-by (partial = p) page-update))))) [] page-update)
+
+  ;; all pn pairs index
+  (for [x (range 0 (count page-update))
+        y (range (inc x) (count page-update))]
+
+    {:index [x y]
+     :pn    [(nth page-update x) (nth page-update y)]})
+
+  (defn unordered-pair [rules-map [n m]]
+    (boolean (let [[before-set _after-set] (get rules-map n)
+                   [_before-set after-set] (get rules-map m)]
+               (or (and before-set
+                        (before-set m))
+                   (and after-set
+                        (after-set n)))))
+
+
+
+    #_(if-let [[before-set after-set] (get rules-map n)]
+        (not (before-set m))
+        true))
+
+  (unordered-pair {2 [#{1} #{2}]} [2 3])
+  (unordered-pair {2 [#{3} #{6}]} [2 3])
+  (unordered-pair {2 [#{1} #{3}]} [2 3])
+  (unordered-pair {2 [#{1} #{3}]
+                   3 [#{1} #{2}]
+                   } [2 3])
+  
+
+
+  (defn swap
+    [items i j]
+    (assoc items i (items j) j (items i)))
+
+  (swap page-update 1 0)
+  (swap page-update 3 0)
+
+
+
+
+
+  ;;
+  )
