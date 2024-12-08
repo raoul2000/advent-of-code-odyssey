@@ -175,7 +175,7 @@
          (map #(nth % (quot (count %) 2)))
          (apply +))))
 
-(solution-1)
+(println (format "solution 1 = %d" (solution-1)))
 ;; => 7307 ⭐
 
 
@@ -185,63 +185,109 @@
 ;; use the page ordering rules to put the page numbers in the right order
 
 ;; finding the incorrectly oredered updates can be done <ith part of solution 1
+
+(defn incorrectly-ordered-updates [rules-map page-updates]
+  (let [invalid-order? (partial invalid-order rules-map)]
+    (remove invalid-order? page-updates)))
+
+(comment
+  (def puzzle-input (slurp "resources/day_5.txt"))
+  (def puzzle-input sample-input)
+  (incorrectly-ordered-updates (create-rules-map puzzle-input) (parse-page-updates puzzle-input))
+;;
+  )
+
 ;; but then ...
 ;; .... we must find which page numbers are breaking rule and switch their position to
 ;; get a correctly-ordered updates.
 
+(defn pairs-to-test
+  "Given a list of page updates, returns a list of maps for each page number pair where
+  
+  - `:index` : vector [index-n index-m]
+  - `:pn` : vector [n m]
+
+  Example:
+  ```clojure
+  (pairs-to-test  [1 2 3])
+  =>  (
+        {:index [0 1], :pn [1 2]} 
+        {:index [0 2], :pn [1 3]} 
+        {:index [1 2], :pn [2 3]}
+      )
+  ```
+  "
+  [pg-update-xs]
+  (for [x (range 0 (count pg-update-xs))
+        y (range (inc x) (count pg-update-xs))]
+    {:index [x y]
+     :pn    [(nth pg-update-xs x) (nth pg-update-xs y)]}))
+
+(defn unordered-pair
+  "Returns TRUE if page update pair `[n m]` complies with ordering rules provided by `rules-map`"
+  [rules-map [n m]]
+  (boolean (let [[before-set _after-set] (get rules-map n)
+                 [_before-set after-set] (get rules-map m)]
+             (or (and before-set
+                      (before-set m))
+                 (and after-set
+                      (after-set n))))))
 (comment
 
-  (def page-update [97,75,47,61,53])
-
-  ;; list of pairs to test : 
-  ;; 
-  ;; [97 75] [97 47] [97 61] [97 53]
-  ;; [75 47] [75 61] [75 53]
-  ;; 
-
-  (reduce (fn [res p]
-            (conj res (map #(vector p %) (last (partition-by (partial = p) page-update))))) [] page-update)
-
-  ;; all pn pairs index
-  (for [x (range 0 (count page-update))
-        y (range (inc x) (count page-update))]
-
-    {:index [x y]
-     :pn    [(nth page-update x) (nth page-update y)]})
-
-  (defn unordered-pair [rules-map [n m]]
-    (boolean (let [[before-set _after-set] (get rules-map n)
-                   [_before-set after-set] (get rules-map m)]
-               (or (and before-set
-                        (before-set m))
-                   (and after-set
-                        (after-set n)))))
-
-
-
-    #_(if-let [[before-set after-set] (get rules-map n)]
-        (not (before-set m))
-        true))
-
   (unordered-pair {2 [#{1} #{2}]} [2 3])
+  (unordered-pair {2 [#{1} #{2}]} [22 35])
   (unordered-pair {2 [#{3} #{6}]} [2 3])
   (unordered-pair {2 [#{1} #{3}]} [2 3])
   (unordered-pair {2 [#{1} #{3}]
-                   3 [#{1} #{2}]
-                   } [2 3])
-  
-
-
-  (defn swap
-    [items i j]
-    (assoc items i (items j) j (items i)))
-
-  (swap page-update 1 0)
-  (swap page-update 3 0)
-
-
-
-
-
+                   3 [#{1} #{2}]} [2 3])
   ;;
   )
+
+
+(defn find-unordered-pairs
+  "Returns all page updates in `page-update-xs` with incorrect order for the given `rules-map`"
+  [rules-map page-update-xs]
+  (->> (pairs-to-test page-update-xs)
+       (filter #(unordered-pair rules-map (get % :pn)))))
+
+(comment
+  (find-unordered-pairs {2 [#{1} #{3}]} [1 2 3])
+  (find-unordered-pairs {3 [#{1} #{2}]} [1 2 3])
+  ;;
+  )
+
+
+(defn swap
+  [items i j]
+  (assoc items i (items j) j (items i)))
+
+(defn reorder-page-updates [rules-m page-update]
+  (loop [pg-update-xs         page-update
+         first-unordered-pair (first (find-unordered-pairs rules-m page-update))]
+    (if-not first-unordered-pair
+      pg-update-xs
+      (let [swapped-updates (swap pg-update-xs
+                                  (first  (:index first-unordered-pair))
+                                  (second (:index first-unordered-pair)))]
+        (recur swapped-updates (first (find-unordered-pairs rules-m swapped-updates)))))))
+
+(comment
+  (reorder-page-updates {2 [#{3} #{5}]} [1 2 3])
+  (reorder-page-updates {2 [#{3} #{5}]
+                         4 [#{1 2} #{6 7 9}]} [1 2 3 6 4 10])
+  ;;
+  )
+
+
+(defn solution-2 []
+  (let [puzzle-input (slurp "resources/day_5.txt")
+        page-updates (parse-page-updates puzzle-input)
+        rules-map    (create-rules-map puzzle-input)]
+
+    (->> (incorrectly-ordered-updates rules-map page-updates)
+         (map #(reorder-page-updates rules-map %))
+         (map #(nth % (quot (count %) 2)))
+         (apply +))))
+
+(println (format "solution 2 = %d" (solution-2)))
+;; :=> 4712 ⭐
