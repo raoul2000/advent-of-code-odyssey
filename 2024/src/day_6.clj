@@ -162,7 +162,7 @@
   "Given the `input` return a map where : 
    
    - **:grid** : 2d array of characters representing the grid
-   - **:path** : array of pair where the first item is a position and the second is a direction"
+   - **:path** : array of pair where the first item is a position [x y] and the second is a direction [dx dy]"
   [input]
   (let [path-map (build-path input)]
     {:grid  (:grid path-map)
@@ -172,16 +172,42 @@
 ;
 (comment
 
-  
   (count (set (map first (:path (create-reference-path puzzle-input)))))
   ;; => 5312 for puzzle input.. ok !
 
   (def ref-path (create-reference-path sample-input))
   (:grid ref-path)
 
-  
+  (defn is-loop
+    "Returns TRUE if the given `step` exists in the given `path-xs` where :
+     
+     - a step is a pair like [[x y] [dx dy]]
+     - the path is a collection of steps
+     
+     "
+    [step path-xs]
+    (->> path-xs
+         (map #{step})
+         (filter identity)
+         seq))
 
+
+  (map #{1 2} [4 3])
+  (seq (filter identity (map #{[[4 5] [0 1]]} [[[6 4] [1 0]]  [[6 7] [0 1]]])))
+  (seq (filter identity (map #{[[4 5] [0 1]]} [[[6 4] [1 0]]  [[4 5] [0 1]]])))
+
+  (is-loop [[4 5] [0 1]] [[[6 4] [1 0]]  [[4 5] [0 1]]])
+  (#{1 2} [4 2])
+
+  ;; a functioj to modify the grid by adding an obstruction
+
+  (defn add-obstruction [[x y] grid]
+    (update-in grid [y x] (constantly \#)))
   
+  (:grid ref-path)
+
+  (add-obstruction [2 2] (:grid ref-path))
+
 
 
 
