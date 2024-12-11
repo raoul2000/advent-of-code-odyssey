@@ -133,5 +133,57 @@
 (solution-1 puzzle-input)
 ;; => 5312 ⭐
 
+(time (solution-1 puzzle-input))
+;; Elapsed time: 1027.4888 msecs
+
 
 ;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; find all of the possible positions for such an obstruction that would get the guard stuck in a loop.
+;;
+;; Option 1 : 
+;; on each position, test if adding an obstruction in the direction will redirect the guard in a position + direction
+;; that we already went through.
+
+;; let's try something (not sure if it will not blow up process time)
+;; - create the gurad path that leaved the grid (the one from solution-1
+;; - for each [position, direction] 
+;;     - if the next pos is empty
+;;          - modify the grid by adding an obstruction in thie next position
+;;          - calculate the new path in this new grid until
+;;               - the path leaves the grid 
+;;                 OR
+;;               - the path is a loop (TODO: loop detection) : in this case, store the position
+;;       else 
+;;          - continue with the next pos
+
+
+(defn create-reference-path
+  "Given the `input` return a map where : 
+   
+   - **:grid** : 2d array of characters representing the grid
+   - **:path** : array of pair where the first item is a position and the second is a direction"
+  [input]
+  (let [path-map (build-path input)]
+    {:grid  (:grid path-map)
+     :path  (map vector
+                 (-> path-map first second butlast)
+                 (-> path-map second second butlast))}))
+;
+(comment
+
+  
+  (count (set (map first (:path (create-reference-path puzzle-input)))))
+  ;; => 5312 for puzzle input.. ok !
+
+  (def ref-path (create-reference-path sample-input))
+  (:grid ref-path)
+
+  
+
+  
+
+
+
+  ;;
+  )
