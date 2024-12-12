@@ -103,7 +103,6 @@
   )
 
 (defn build-path [sample-input]
-
   (let [grid      (create-grid sample-input)
         start-pos (starting-pos grid)]
     (loop [path {:pos  [start-pos]
@@ -130,11 +129,15 @@
        set
        count))
 
-(solution-1 puzzle-input)
-;; => 5312 ⭐
+(comment
+  (solution-1 puzzle-input)
+  ;; => 5312 ⭐
 
-(time (solution-1 puzzle-input))
-;; Elapsed time: 1027.4888 msecs
+  (time (solution-1 puzzle-input))
+  ;; Elapsed time: 1027.4888 msecs
+
+  ;;
+  )
 
 
 ;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -146,7 +149,7 @@
 ;; that we already went through.
 
 ;; let's try something (not sure if it will not blow up process time)
-;; - create the gurad path that leaved the grid (the one from solution-1
+;; - create the guard path that leaved the grid (the one from solution-1)
 ;; - for each [position, direction] 
 ;;     - if the next pos is empty
 ;;          - modify the grid by adding an obstruction in thie next position
@@ -169,46 +172,65 @@
      :path  (map vector
                  (-> path-map first second butlast)
                  (-> path-map second second butlast))}))
-;
-(comment
 
-  (count (set (map first (:path (create-reference-path puzzle-input)))))
-  ;; => 5312 for puzzle input.. ok !
-
-  (def ref-path (create-reference-path sample-input))
-  (:grid ref-path)
-
-  (defn is-loop
-    "Returns TRUE if the given `step` exists in the given `path-xs` where :
+(defn loop?
+  "Returns TRUE if the given `step` exists in the given `path-xs` where :
      
      - a step is a pair like [[x y] [dx dy]]
-     - the path is a collection of steps
+     - `path-xs` is a collection of steps
      
      "
-    [step path-xs]
-    (->> path-xs
-         (map #{step})
-         (filter identity)
-         seq))
+  [step path-xs]
+  (boolean (->> path-xs
+                (map #{step})
+                (filter identity)
+                seq)))
 
+(defn add-obstruction
+  "Returns `grid` where an obstruction character is added at position `[x y]`.
+   Returns `grid`with no change when position is out of grid.
+   "
+  [[x y] grid]
+  (let [[col-count line-count] (grid-size grid)]
+    (if (and (< -1 x col-count)
+             (< -1 y line-count))
+      (update-in grid [y x] (constantly \#))
+      grid)))
 
-  (map #{1 2} [4 3])
-  (seq (filter identity (map #{[[4 5] [0 1]]} [[[6 4] [1 0]]  [[6 7] [0 1]]])))
-  (seq (filter identity (map #{[[4 5] [0 1]]} [[[6 4] [1 0]]  [[4 5] [0 1]]])))
+(def step-position first)
+(def step-direction second)
 
-  (is-loop [[4 5] [0 1]] [[[6 4] [1 0]]  [[4 5] [0 1]]])
-  (#{1 2} [4 2])
+(defn build-obstructed-path
+  "Returns a path starting from `start-step` in `initial-grid` where an obstruction is added to position `obstruction-pos"
+  [initial-grid start-step obstruction-pos]
+  (let [grid      (add-obstruction obstruction-pos initial-grid)]
+    (loop [steps [start-step]]
+      (let [cur-pos (step-position  (last steps))
+            cur-dir (step-direction (last steps))]
+        (cond
+          (not (in-grid? grid cur-pos))            (butlast steps)
+          (loop? (last steps) (butlast steps))     nil
+          :else
+          (let [{next-pos :pos
+                 next-dir :dir} (find-next-move cur-pos cur-dir grid)]
+            (recur (conj steps [next-pos next-dir]))))))))
 
-  ;; a functioj to modify the grid by adding an obstruction
-
-  (defn add-obstruction [[x y] grid]
-    (update-in grid [y x] (constantly \#)))
+(defn find-possible-obstruction-pos [grid step]
   
-  (:grid ref-path)
+  )
 
-  (add-obstruction [2 2] (:grid ref-path))
+(comment
+  (= (build-obstructed-path (create-grid sample-input)  [[4 6] [0 -1]] [4 0])
+     (build-obstructed-path (create-grid sample-input)  [[4 6] [0 -1]] [-1 -1])))
 
+(defn solution-2 [input]
+  (let [grid          (create-grid input)
+        initial-steps (build-obstructed-path grid [(starting-pos grid) [0 -1]] [-1 -1])]
+    initial-steps
+    ))
 
+(comment
+  (count (set (map step-position (solution-2 sample-input))))
 
 
   ;;
