@@ -92,7 +92,7 @@
       (if (not= \# (char-at grid next-pos))
         {:pos next-pos
          :dir new-dir}
-        (recur (rotate-direction-90 current-dir))))))
+        (recur (rotate-direction-90 new-dir))))))
 
 (comment
   (def grid (create-grid sample-input))
@@ -134,7 +134,7 @@
   ;; => 5312 ⭐
 
   (time (solution-1 puzzle-input))
-  ;; Elapsed time: 1027.4888 msecs
+  ;; Elapsed time: 1027.4888 msecs (not good)
 
   ;;
   )
@@ -160,19 +160,6 @@
 ;;       else 
 ;;          - continue with the next pos
 
-
-(defn create-reference-path
-  "Given the `input` return a map where : 
-   
-   - **:grid** : 2d array of characters representing the grid
-   - **:path** : array of pair where the first item is a position [x y] and the second is a direction [dx dy]"
-  [input]
-  (let [path-map (build-path input)]
-    {:grid  (:grid path-map)
-     :path  (map vector
-                 (-> path-map first second butlast)
-                 (-> path-map second second butlast))}))
-
 (defn loop?
   "Returns TRUE if the given `step` exists in the given `path-xs` where :
      
@@ -197,41 +184,86 @@
       (update-in grid [y x] (constantly \#))
       grid)))
 
+
 (def step-position first)
 (def step-direction second)
 
 (defn build-obstructed-path
-  "Returns a path starting from `start-step` in `initial-grid` where an obstruction is added to position `obstruction-pos"
+  "Returns a path starting from `start-step` in `initial-grid` where an 
+   obstruction is added to position `obstruction-pos`.
+
+   Returns **nil** when a loop is detected."
   [initial-grid start-step obstruction-pos]
   (let [grid      (add-obstruction obstruction-pos initial-grid)]
     (loop [steps [start-step]]
       (let [cur-pos (step-position  (last steps))
             cur-dir (step-direction (last steps))]
         (cond
+          ;; guard left the grid
           (not (in-grid? grid cur-pos))            (butlast steps)
+
+          ;; guard enters in a loop
           (loop? (last steps) (butlast steps))     nil
+
+          ;; continue with next tep
           :else
           (let [{next-pos :pos
                  next-dir :dir} (find-next-move cur-pos cur-dir grid)]
             (recur (conj steps [next-pos next-dir]))))))))
 
-(defn find-possible-obstruction-pos [grid step]
-  
-  )
+;; this is not required because obstruction pos is in fact the list of pos of the output steps
+;; except the first one (starting pos)
+(defn next-obstruction-pos
+  "Returns the position of the next obstruction point from the current step `[pos dir]`
+   in the given `grid`.
+   
+   Returns **nil** if no obstruction pos could be found.
+   "
+  [grid [pos dir]]
+  (let [obstruction-pos (mapv + pos dir)
+        char-at-obstruction-pos (char-at grid obstruction-pos)]
+    (when (= \. char-at-obstruction-pos)
+      obstruction-pos)))
+
 
 (comment
   (= (build-obstructed-path (create-grid sample-input)  [[4 6] [0 -1]] [4 0])
      (build-obstructed-path (create-grid sample-input)  [[4 6] [0 -1]] [-1 -1])))
 
+(defn solution-2-mapper [obstruction-pos]
+  (println obstruction-pos)
+  (Thread/sleep 1)
+  (when (nil? (build-obstructed-path grid first-step obstruction-pos))
+    obstruction-pos))
+
 (defn solution-2 [input]
-  (let [grid          (create-grid input)
-        initial-steps (build-obstructed-path grid [(starting-pos grid) [0 -1]] [-1 -1])]
-    initial-steps
-    ))
+  (let [grid               (create-grid input)
+        first-step         [(starting-pos grid) [0 -1]]
+        reference-steps    (build-obstructed-path grid first-step [-1 -1])
+        obstruction-pos-xs (rest (map first reference-steps))]
+    (doall (map (fn [obstruction-pos]
+                  (when (nil? (build-obstructed-path grid first-step obstruction-pos))
+                    obstruction-pos))
+                obstruction-pos-xs))))
 
 (comment
-  (count (set (map step-position (solution-2 sample-input))))
+  (time (solution-2 sample-input))
+
+  (->> (remove nil? (solution-2 sample-input))
+       set
+       count)
+  ;; => 6 👍 
+  ;; ok for the sample input but ..
 
 
+
+  (->> (remove nil? (solution-2 puzzle-input))
+       set
+       count)
+  ;; when dzaling with the puzzle input, this BRUTE FORCE solution 
+  ;; just explodes 💥 .. process time is infinite 😭
+
+
+  (printf "hello")
   ;;
   )

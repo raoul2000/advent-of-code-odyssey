@@ -47,4 +47,20 @@
 
     (is (not
          (nil? (d6/build-obstructed-path (d6/create-grid d6/sample-input) [[4 6] [0 -1]] [3 5])))
-        "testing with useless obstruction "))) 
+        "testing with useless obstruction ")))
+
+(deftest next-obstruction-pos-test
+  (testing "Next obstruction pos"
+    (is (= [0 1] (d6/next-obstruction-pos
+                  (d6/create-grid d6/sample-input)
+                  [[0 0] [0 1]]))
+        "when obstruction pos is available")
+    (is (= nil (d6/next-obstruction-pos
+                (d6/create-grid d6/sample-input)
+                [[0 0] [0 -1]]))
+        "when obstruction pos is out of grid")
+
+    (is (= nil (d6/next-obstruction-pos
+                (d6/create-grid d6/sample-input)
+                [[4 1] [0 -1]]))
+        "when obstruction pos is obstacle"))) 
