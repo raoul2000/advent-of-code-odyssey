@@ -1,5 +1,6 @@
 (ns day-6
-  (:require [clojure.string :as s]))
+  (:require [clojure.string :as s]
+            [criterium.core :refer [bench benchmark]]))
 
 
 ;; https://adventofcode.com/2024/day/6
@@ -95,11 +96,54 @@
         (recur (rotate-direction-90 new-dir))))))
 
 (comment
+  (take 4 (iterate rotate-direction-90 [0 -1]))
+
+
   (def grid (create-grid sample-input))
   (find-next-move (starting-pos grid) [0 -1] grid)
+  (bench (find-next-move (starting-pos grid) [0 -1] grid))
+  ; Evaluation count : 3815460 in 60 samples of 63591 calls.
+  ;              Execution time mean : 16,909071 µs
+  ;     Execution time std-deviation : 1,035856 µs
+  ;    Execution time lower quantile : 15,716314 µs ( 2,5%)
+  ;    Execution time upper quantile : 19,846827 µs (97,5%)
+  ;                    Overhead used : 0,883081 ns
+  ; 
+  ; Found 3 outliers in 60 samples (5,0000 %)
+  ; 	low-severe	 3 (5,0000 %)
+  ;  Variance from outliers : 45,1555 % Variance is moderately inflated by outliers
+
   (find-next-move [4 1] [0 -1] grid)
   (find-next-move [0 0] [0 -1] grid)
+
+
   ;; 
+  )
+
+(defn find-next-move-2 [current-pos current-dir grid]
+  (->> (take 4 (iterate rotate-direction-90 current-dir))
+       (map #(into {} [[:pos (move % current-pos)] [:dir %]]))
+       (drop-while #(= \# (char-at grid (first %))))
+       first))
+
+(comment
+  (into {} [[:a 1]])
+  (def grid (create-grid sample-input))
+  (find-next-move-2 (starting-pos grid) [0 -1] grid)
+  (bench (find-next-move-2 (starting-pos grid) [0 -1] grid))
+; Evaluation count : 3471540 in 60 samples of 57859 calls.
+;              Execution time mean : 18,763427 µs
+;     Execution time std-deviation : 2,135951 µs
+;    Execution time lower quantile : 16,616817 µs ( 2,5%)
+;    Execution time upper quantile : 24,973701 µs (97,5%)
+;                    Overhead used : 0,883081 ns
+; 
+; Found 8 outliers in 60 samples (13,3333 %)
+; 	low-severe	 3 (5,0000 %)
+; 	low-mild	 5 (8,3333 %)
+;  Variance from outliers : 75,4855 % Variance is severely inflated by outliers  
+
+  ;;
   )
 
 (defn build-path [sample-input]
@@ -136,6 +180,18 @@
   (time (solution-1 puzzle-input))
   ;; Elapsed time: 1027.4888 msecs (not good)
 
+  (bench (solution-1 puzzle-input))
+  ; Evaluation count : 180 in 60 samples of 3 calls.
+  ;              Execution time mean : 426,671339 ms
+  ;     Execution time std-deviation : 68,161681 ms
+  ;    Execution time lower quantile : 330,582766 ms ( 2,5%)
+  ;    Execution time upper quantile : 550,395190 ms (97,5%)
+  ;                    Overhead used : 0,883081 ns
+  ; 
+  ; Found 1 outliers in 60 samples (1,6667 %)
+  ; 	low-severe	 1 (1,6667 %)
+  ;  Variance from outliers : 85,9002 % Variance is severely inflated by outliers
+
   ;;
   )
 
@@ -168,14 +224,21 @@
      
      "
   [step path-xs]
-  (boolean (->> path-xs
-                (map #{step})
-                (filter identity)
-                seq)))
+  (boolean (some (partial = step) path-xs))
+  #_(boolean (->> path-xs
+                  (map #{step})
+                  (filter identity)
+                  seq)))
+
+(comment
+  (->>  [[[6 4] [1 0]]  [[4 5] [0 1]]]
+        (some #(= [[4 8] [0 1]] %)))
+  ;;
+  )
 
 (defn add-obstruction
   "Returns `grid` where an obstruction character is added at position `[x y]`.
-   Returns `grid`with no change when position is out of grid.
+   Returns `grid` with no change when position is out of grid.
    "
   [[x y] grid]
   (let [[col-count line-count] (grid-size grid)]
@@ -188,28 +251,57 @@
 (def step-position first)
 (def step-direction second)
 
+(defn place-ùmarker)
+
 (defn build-obstructed-path
   "Returns a path starting from `start-step` in `initial-grid` where an 
    obstruction is added to position `obstruction-pos`.
 
    Returns **nil** when a loop is detected."
   [initial-grid start-step obstruction-pos]
-  (let [grid      (add-obstruction obstruction-pos initial-grid)]
-    (loop [steps [start-step]]
-      (let [cur-pos (step-position  (last steps))
-            cur-dir (step-direction (last steps))]
-        (cond
+  (loop [grid  (add-obstruction obstruction-pos initial-grid)
+         steps [start-step]]
+    (let [cur-pos (step-position  (last steps))
+          cur-dir (step-direction (last steps))]
+      (cond
           ;; guard left the grid
-          (not (in-grid? grid cur-pos))            (butlast steps)
+        (not (in-grid? grid cur-pos))            (butlast steps)
 
           ;; guard enters in a loop
-          (loop? (last steps) (butlast steps))     nil
+        (loop? (last steps) (butlast steps))     nil
 
-          ;; continue with next tep
-          :else
-          (let [{next-pos :pos
-                 next-dir :dir} (find-next-move cur-pos cur-dir grid)]
-            (recur (conj steps [next-pos next-dir]))))))))
+          ;; continue with next step
+        :else
+        (let [{next-pos :pos
+               next-dir :dir} (find-next-move cur-pos cur-dir grid)]
+          (recur (if (in-grid? grid next-pos)
+                   (update-in grid next-pos  (constantly (case next-dir
+                                                           [0 -1] \^
+                                                           [1  0] \>
+                                                           [0  1] \v
+                                                           [-1 0] \<
+                                                           (throw (ex-info "invalid direction" {:dir next-dir})))))
+                   grid)
+
+                 (conj steps [next-pos next-dir])))))))
+
+
+
+(comment
+  (def grid (create-grid puzzle-input))
+  (def first-step [(starting-pos grid) [0 -1]])
+
+  (time (build-obstructed-path grid first-step [0 0]))
+  ;; when build-obstructed-path doesn't include the loop detection
+  ;; time is divided by 8 !!
+
+  ;; This MUST be improved
+  ;; One option is to place a marker character in the grid and then
+  ;; compare the current step with this marker.
+
+
+  ;;
+  )
 
 ;; this is not required because obstruction pos is in fact the list of pos of the output steps
 ;; except the first one (starting pos)
@@ -230,21 +322,20 @@
   (= (build-obstructed-path (create-grid sample-input)  [[4 6] [0 -1]] [4 0])
      (build-obstructed-path (create-grid sample-input)  [[4 6] [0 -1]] [-1 -1])))
 
-(defn solution-2-mapper [obstruction-pos]
-  (println obstruction-pos)
-  (Thread/sleep 1)
+(defn solution-2-mapper [first-step obstruction-pos]
+  #_(println obstruction-pos)
+  #_(Thread/sleep 100)
   (when (nil? (build-obstructed-path grid first-step obstruction-pos))
     obstruction-pos))
+
+
 
 (defn solution-2 [input]
   (let [grid               (create-grid input)
         first-step         [(starting-pos grid) [0 -1]]
         reference-steps    (build-obstructed-path grid first-step [-1 -1])
         obstruction-pos-xs (rest (map first reference-steps))]
-    (doall (map (fn [obstruction-pos]
-                  (when (nil? (build-obstructed-path grid first-step obstruction-pos))
-                    obstruction-pos))
-                obstruction-pos-xs))))
+    (take 1 (map (partial solution-2-mapper first-step) obstruction-pos-xs))))
 
 (comment
   (time (solution-2 sample-input))
