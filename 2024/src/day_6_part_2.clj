@@ -163,11 +163,9 @@
           grid     (:grid    path)
           in-loop  (:loop?   path)]
       (cond
-        (not (in-grid? grid cur-pos))  path
+        (or in-loop
+            (not (in-grid? grid cur-pos)))    path
 
-        in-loop                       path #_(do
-                                        (print cur-pos)
-                                        path)
         :else
         (let [[next-pos next-dir] (find-next-step cur-pos cur-dir grid)]
           (recur (-> path
@@ -177,31 +175,24 @@
                      (assoc :loop? (in-loop? grid next-pos next-dir))
                      (update :grid write-char-at next-pos (direction->char next-dir)))))))))
 
+(defn solution-2 [input]
+  (let [initial-grid (create-grid input)
+        start-pos    (find-starting-pos initial-grid)
+        guard-path   (:pos (build-path-with-loop-detection initial-grid start-pos))]
+    (->> (map #(write-char-at initial-grid % \O) (set guard-path))
+         (map #(build-path-with-loop-detection % start-pos))
+         (filter :loop?)
+         count)))
+
 (comment
-  (def initial-grid (create-grid puzzle-input))
-  (def start-pos (find-starting-pos initial-grid))
-  (def guard-path (:pos (build-path-with-loop-detection initial-grid start-pos)))
+  (solution-2 sample-input)
+  ;; => 6 good
 
-  (count guard-path)
-  (count (set guard-path))
+  (solution-2 puzzle-input)
+  ;;=> 1748 ⭐⭐ 
 
-  (def path-1 (->> (map #(write-char-at initial-grid % \O) (set guard-path))
-                   (map #(build-path-with-loop-detection % start-pos))
-                   (filter :loop?)
-                   count
-                   #_(take 8)
-                   #_last))
-
-  ;; 1748 !!
-  ()
-  (grid->str (:grid path-1))
-  
-
-  (build-path-with-loop-detection (write-char-at (create-grid sample-input) [3 6] \#) [4 6])
-
-
-
-
-
+  (time (solution-2 puzzle-input))
+  ; "Elapsed time: 47810.4359 msecs"
   ;;
   )
+ 
