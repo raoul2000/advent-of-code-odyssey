@@ -247,11 +247,8 @@
       (update-in grid [y x] (constantly \#))
       grid)))
 
-
 (def step-position first)
 (def step-direction second)
-
-(defn place-ùmarker)
 
 (defn build-obstructed-path
   "Returns a path starting from `start-step` in `initial-grid` where an 
@@ -323,8 +320,6 @@
      (build-obstructed-path (create-grid sample-input)  [[4 6] [0 -1]] [-1 -1])))
 
 (defn solution-2-mapper [first-step obstruction-pos]
-  #_(println obstruction-pos)
-  #_(Thread/sleep 100)
   (when (nil? (build-obstructed-path grid first-step obstruction-pos))
     obstruction-pos))
 
@@ -351,10 +346,10 @@
   (->> (remove nil? (solution-2 puzzle-input))
        set
        count)
-  ;; when dzaling with the puzzle input, this BRUTE FORCE solution 
+  ;; when dealing with the puzzle input, this BRUTE FORCE solution 
   ;; just explodes 💥 .. process time is infinite 😭
 
 
-  (printf "hello")
-  ;;
+  ;; let's continue on day-6-part2
+    ;;
   )
