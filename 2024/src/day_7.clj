@@ -51,10 +51,7 @@
           [(first num-xs)]
           (rest num-xs)))
 
-(comment
-  (reduce-computation 292 [11 6 16 20])
-  ;;
-  )
+
 
 (defn solution-1 [input]
   (->> input
@@ -78,5 +75,46 @@
   ;;
   )
 
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; - new operators : || (concatenation)
+;; We will just keep the same algo than part 1 and introduce this new operator
+
+(defn concatenation-operator [a b]
+  (edn/read-string (str a b)))
+
+(defn reduce-computation-ex [target-result num-xs]
+  (reduce (fn [res n]
+            (let [new-result (->> res
+                                  (map (juxt (partial + n) (partial * n) #(concatenation-operator % n)))
+                                  flatten
+                                  (remove #(> % target-result)))]
+              (if (empty? new-result)
+                (reduced false)
+                new-result)))
+          [(first num-xs)]
+          (rest num-xs)))
+
+(defn solution-2 [input]
+  (->> input
+       parse-input
+       (map (fn [n-xs]
+              (let [target-n (first n-xs)
+                    operands (rest n-xs)
+                    computations (->> (reduce-computation-ex target-n operands)
+                                      (some (partial = target-n)))]
+                (when computations target-n))))
+       (remove nil?)
+       (apply +)))
+
+(comment
+  (solution-2 sample-input)
+  ;; => 11387 (good)
+
+  (solution-2 puzzle-input)
+  ;; => 438027111276610 ⭐
+
+  ;;
+  )
 
 
