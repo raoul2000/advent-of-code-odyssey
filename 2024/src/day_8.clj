@@ -175,8 +175,8 @@
   [grid]
   (map (fn [[antenna-frequency antenna-pair-pos-xs]]
          [antenna-frequency (into [] (map (fn [antennas-pair-pos]
-                                       {:antenna-pair-pos antennas-pair-pos
-                                        :antinodes-pos   (create-antinodes antennas-pair-pos grid)})   antenna-pair-pos-xs))])
+                                            {:antenna-pair-pos antennas-pair-pos
+                                             :antinodes-pos   (create-antinodes antennas-pair-pos grid)})   antenna-pair-pos-xs))])
        (antennas-pair-positions grid)))
 
 (comment
@@ -205,3 +205,68 @@
   ;;
   )
 
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; antenna pair now generates as many antinodes as possibly fit in the grid.
+;; INCLUDING antenna position itself !
+
+;; we must rewrite  create-antinodes
+
+(defn move-pos [[dx dy] [x y]]
+  (mapv + [dx dy] [x y]))
+
+(defn create-antinodes-ex
+  "Given positions of antenna pair in a `grid`, returns a seq of antinodes positions located 
+     inside the grid."
+  [[[x1 y1] [x2 y2]] grid]
+  (let [dx (- x1 x2)
+        dy (- y1 y2)]
+    (concat (take-while #(in-grid? grid %) (iterate (partial move-pos [dx dy]) [x1 y1]))
+            (take-while #(in-grid? grid %) (iterate (partial move-pos [(* -1 dx) (* -1 dy)]) [x2 y2])))))
+
+(comment
+  (create-antinodes-ex [[5 2] [4 4]] (create-grid sample-input))
+  ;; => ([5 2] [6 0] [4 4] [3 6] [2 8] [1 10])
+  (create-antinodes-ex  [[7 3] [8 1]] (create-grid sample-input))
+  ;; => ([7 3] [6 5] [5 7] [4 9] [3 11] [8 1])
+
+  ;;
+  )
+
+(defn scan-grid-ex
+  "Returns a map describing, for each antenna frequency in the given `grid` : 
+     
+     - each antenna pair position 
+     - all antinodes positions per antenna pair"
+  [grid]
+  (map (fn [[antenna-frequency antenna-pair-pos-xs]]
+         [antenna-frequency (into [] (map (fn [antennas-pair-pos]
+                                            {:antenna-pair-pos antennas-pair-pos
+                                             :antinodes-pos   (create-antinodes-ex antennas-pair-pos grid)})   antenna-pair-pos-xs))])
+       (antennas-pair-positions grid)))
+
+(comment
+  (scan-grid-ex (create-grid sample-input))
+  ;;
+  )
+
+(defn solution-2 [input]
+  (->> input
+       create-grid
+       scan-grid-ex
+       (mapcat second)
+       (map :antinodes-pos)
+       (reduce (fn [res antinode-pos-xs]
+                 (into res antinode-pos-xs)) #{})
+       count))
+
+(comment
+
+  (solution-2 sample-input)
+  ;; => 34 ... good
+
+  (solution-2 puzzle-input)
+  ;; => 991 ⭐
+
+  ;;
+  )
