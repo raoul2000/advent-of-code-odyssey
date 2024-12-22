@@ -11,51 +11,56 @@
 
 (def puzzle-input (slurp "resources/day_9.txt"))
 
-;; convert disk-map to blocks
 (comment
 
-  (map (fn [n] (- (int n)  48)) sample-input)
-  (apply str (flatten (map-indexed (fn [idx c]
-                                     (repeat (- (int c)  48) (if (odd? idx) \. \x))) sample-input)))
+  (def blocks (:blocks (reduce-kv (fn [res index c]
+                                    (let [block-length  (- (int c) 48)
+                                          id-number     (:cur-id res)]
+                                      (if (even? index)
+                       ;; dealing with file length
+                                        (-> res
+                                            (update :cur-id inc)
+                                            (update :blocks into (repeat block-length id-number)))
+                       ;; dealing with free space
+                                        (-> res
+                                            (update :blocks into (repeat  block-length -1))))))
+                                  {:cur-id 0
+                                   :blocks []}
+                                  (vec puzzle-input))))
 
 
-  (def blocks-m (reduce-kv (fn [res index c]
-                             (let [block-length  (- (int c) 48)
-                                   id-number     (:cur-id res)]
-                               (if (even? index)
-                   ;; dealing with file length
-                                 (-> res
-                                     (update :cur-id inc)
-                                     (update :blocks conj [id-number block-length]))
-                   ;; dealing with free space
-                                 (-> res
-                                     (update :blocks conj [-1 block-length])))))
-                           {:cur-id 0
-                            :blocks []}
-                           (vec sample-input)))
+  ;; add index
+  (def indexed-blocks (map-indexed vector blocks))
 
-;; [[type length]]
-;; - type = -1 : empty space
-;; - else file-id
+  (def empty-space? #(= -1 (second %)))
+  ;; blocks to move
+  (def moveable-blocks (->> indexed-blocks
+                            (remove empty-space?)
+                            reverse))
 
+  (def block-index first)
 
-  (defn free-space-length [block-xs]
-    (->> block-xs
-         (filter #(= -1 (first %)))
-         (map second)
-         (apply +)))
+  (def result (loop [blocks          indexed-blocks
+                     moveable-blocks moveable-blocks
+                     final           []]
+                (if (or (empty? moveable-blocks)
+                        (< (block-index (first moveable-blocks))
+                           (block-index (first blocks))))
+                  final
+                  (recur (rest blocks)
+                         (if (empty-space? (first blocks))
+                           (rest moveable-blocks)
+                           moveable-blocks)
+                         (if (empty-space? (first blocks))
+                           (conj final (first moveable-blocks))
+                           (conj final (first blocks)))))))
 
-  (free-space-length (:blocks blocks-m))
+  (->> result
+       (map-indexed (fn [idx v] (vector idx (second v))))
+       (map #(apply * %))
+       (reduce +))
 
-  (defn expand-file-blocks [block-xs]
-    (->> block-xs
-         (remove #(= -1 (first %)))
-         (map #(repeat (second %) (first %)))
-         flatten))
-
-  (expand-file-blocks (:blocks blocks-m))
-
-
+  ;; => 6446899523367 ⭐
 
 
   ;;
