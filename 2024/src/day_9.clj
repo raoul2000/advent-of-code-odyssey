@@ -92,3 +92,70 @@
 
 ;;
   )
+
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; - move the whole file
+;; - by decreasing file id numnber 
+
+(comment
+
+  (def blocks [0 0 -1 -1 -1 1 1 1 -1 -1 -1 2 -1 -1 -1 3 3 3 -1 4 4 -1 5 5 5 5 -1])
+
+  ;; to parittioned blocks
+  (partition-by identity blocks)
+
+  ;; to partitionned block 2
+  (map-indexed (fn [idx b]
+                 (vector idx (first b) (count b))) (partition-by identity blocks))
+
+  (def block-index first)
+  (def block-type second)
+  (def block-size last)
+
+  (def free-space? (comp (partial = -1) block-type))
+  (free-space? [1 1 2])
+  (free-space? [1 -1 2])
+
+  (defn can-hold? [target-block file-block]
+    (and (free-space? target-block)
+         (>= (block-size target-block)
+             (block-size file-block))))
+
+  (can-hold? [0 -1 2] [11 5 2])
+  (can-hold? [0 -1 2] [11 5 3])
+  (can-hold? [0 -1 3] [11 5 2])
+  (can-hold? [0 1 3] [11 5 2])
+
+  (defn expand-block [[_idx type size]]
+    (repeat size type))
+
+  (expand-block [1 5 2])
+  (expand-block [8 5 4])
+
+  (defn merge-blocks [empty-block file-block]
+    (map #(into [] %) (partition-by identity (pad (count (expand-block empty-block)) (expand-block file-block) -1))))
+  
+  (merge-blocks [0 -1 3] [11 2 2])
+  ;; => ([2 2] [-1])
+  (merge-blocks [0 -1 3] [11 2 3])
+  ;; => ([2 2 2])
+
+
+  ;; to block seq
+  (into [] (flatten (partition-by identity blocks)))
+
+  ;; [-1 -1 -1 ] + [ 2 2 ] => [2 2]  [-1]
+
+  (defn pad [n coll val]
+    (take n (concat coll (repeat val))))
+
+  (defn merge-blocks [empty-block file-block]
+    (map #(into [] %) (partition-by identity (pad (count empty-block) file-block -1))))
+
+  (merge-blocks [-1 -1] [2 2])
+  (merge-blocks [-1 -1 -1] [2 2])
+
+
+
+  ;;
+  )
