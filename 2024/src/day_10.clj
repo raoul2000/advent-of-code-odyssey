@@ -190,7 +190,7 @@
 
 (defn find-all-trails
   "Given a `grid` returns a loc describing all trails. Each node is a step with next
-    step set as children nodes.
+   step set as children nodes.
 
    Note that the root node is not an actual step, it exists only as the parent of trail heads.
   "
@@ -201,252 +201,45 @@
        (iterate (fn [this-loc]
                   (->> (add-next-steps grid this-loc)
                        z/next)))
-       #_(take-while (complement z/end?))
-       (take 12)
+       (take-while (complement z/end?))
        last
        z/root
        z/xml-zip))
 
+(defn build-path
+  "Given a `loc` returns a seq of steps up to the trail head step."
+  [loc]
+  (rest (conj (mapv :step (z/path loc)) (node->step (z/node loc)))))
 
-(comment
-
-  (->> (find-all-trails (create-grid sample-input))
+(defn solution-1 [input]
+  (->> (create-grid input)
+       find-all-trails
+       ;; navigate depth first
        (iterate z/next)
+       ;; .. until all nodes have been visited
        (take-while (complement z/end?))
+       ;; only keep locs of lead nodes (height = 9)
        (filter #(= 9 (node-height (z/node %))))
-       (map z/path)
-       #_(map z/node))
-
-
-
-  (def trails (let [grid (create-grid sample-input)
-                    loc (z/xml-zip (create-root-node grid))]
-
-                (->> (iterate (fn [l]
-                                (->> (add-next-steps grid l)
-                                     z/next))  loc)
-                     #_(take-while (complement z/end?))
-                     (take 12)
-                     last
-                     z/root
-                     z/xml-zip)))
-
-
-  (-> trails
-      z/next
-      z/right
-      z/node)
-  (->> (iterate z/next trails)
-       (take 11)
-       last
-       z/node
-       node-height)
-
-  ;; browse a loc and return all trails
-  (->> (iterate z/next trails)
-       (reduce (fn [acc, loc]
-                 (if (z/end? loc)
-                   (reduced acc)
-                   (if (not= 9 (node-height (z/node loc)))
-                     acc
-                     (conj acc (z/path loc))))) [])
-       #_(map :step))
-
- ;; how to build path to root ?
-
-  (map :step (-> {:step [-1 -1 -1]
-                  :content [{:step [1 1 1] :content [{:step [2 3 3]
-                                                      :content [{:step [3 4 4]}]}]}
-                            {:step [1 2 2]}]}
-                 z/xml-zip
-                 z/next
-                 z/next
-                 z/next
-                 #_(map (fn [end-node]
-                          (into [end-node] (->> (z/path end-node)
-                                                (map z/node)
-                                                (map :step)))))
-                 #_z/node
-                 z/path))
-
-  (defn build-path [loc]
-    (conj (mapv :step (z/path loc)) (node->step (z/node loc))))
-
-  (-> {:step [-1 -1 -1]
-       :content [{:step [1 1 1] :content [{:step [2 3 3]
-                                           :content [{:step [3 4 4]}]}]}
-                 {:step [1 2 2]}]}
-      z/xml-zip
-      z/next
-      z/next
-      z/next
-      #_(map (fn [end-node]
-               (into [end-node] (->> (z/path end-node)
-                                     (map :step)))))
-      #_z/node
-      #_z/path
-      build-path)
-;;
-  )
-
-(defn explore-trails
-  ""
-  [grid loc]
-  (if (z/end? loc)
-    loc
-    (let [next-loc    (z/next loc)
-          next-steps  (find-next-steps grid (node->step (z/node next-loc)))]
-      (reduce (fn [res step]
-                (z/append-child res (step->node step))) next-loc next-steps))))
-
-
-
-
+       ;; create path to trail head
+       (map build-path)
+       ;; create map where k is trail head and val is a seq
+       ;; of all steps
+       (group-by first)
+       ;; for each trails, ensure no trail tail duplicate
+       (map (fn [[k v]]
+              [k (reduce (fn [acc i]
+                           (conj acc (last i))) #{} v)]))
+       ;; count trail tails
+       (map (fn [[k v]]
+              [k (count v)]))
+       (map last)
+       (reduce +)))
 
 (comment
-  (->> (take-while (complement z/end?) (iterate (partial explore-trails grid) trail-zip))
-       last
-       z/root)
+  (solution-1 sample-input)
+  ;; => 36 good
 
-
-  (defn count-full-trails
-    "Given a `loc` return the count of nodes having the same height as `max-height`"
-    [loc max-height]
-    (loop [loc loc
-           pos-final #{}]
-      (if (z/end? loc)
-        (count pos-final)
-        (recur (z/next loc)
-               (if (= max-height (node-height  (z/node loc)))
-                 (conj pos-final (z/node loc))
-                 pos-final)))))
-
-  (count-full-trails (z/xml-zip {:step [0 0 6],
-                                 :content
-                                 [{:step [3 8 8] :content [{:step [9 8 8]}
-                                                           {:step [9 8 8]}
-                                                           {:step [9 8 8] :content [{:step [1 2 3]}
-                                                                                    {:step [9 2 3]}]}]}]}) 9)
-
-  (def zp-006 (z/xml-zip {:step [-1 -1 -1] :content [{:step [0 0 6]}]}))
-  ;; => 5 trails
-  (def zp-006 (z/xml-zip {:step [-1 -1 -1] :content [{:step [0 1 7]}]}))
-  ;; => 5 trails
-  (def zp-006 (z/xml-zip {:step [-1 -1 -1] :content [{:step [0 2 0]}]}))
-
-  (def zp-006-explore (->> (take-while (complement z/end?) (iterate (partial explore-trails grid) zp-006))
-                           last
-                           z/root
-                           z/xml-zip))
-
-  (count-full-trails zp-006-explore 9)
-
-
-  (->> (take-while (complement z/end?)  (iterate (partial explore-trails grid) trail-zip))
-       last
-       z/root
-         ;; get all trailhead nodes
-       :content
-         ;; create xml zipper for each trailhead node
-       (map z/xml-zip)
-       (map #(count-full-trails % 9)))
-
-
+  (solution-1 puzzle-input)
+  ;; => 593 ⭐
   ;;
   )
-
-
-
-;; try using a zip
-
-(comment
-  ;; trailhead
-  {:pos [2 0] :next []}
-
-  ;; second step
-  {:pos [2 0] :next [{:pos [3 0] :next []}
-                     {:pos [2 1] :next []}]}
-
-  ;; last (leaf)
-  {:pos [2 0] :next [{:pos [3 0]}
-                     {:pos [2 1]}]}
-
-  ;; other model
-  ;; trailhead
-  [[2 0] []]
-
-  ;; second step
-  [[2 0] [[[3 0] []]
-          [[2 1] []]]]
-
-  (defn branch? [node]
-    (and   (= 2 (count node))
-           (vector? (second node))))
-  (def children second)
-
-  (defn make-node [node children]
-    #_[(vec (first node)) (into (second node) children)]
-    [(vec (first node)) (vec children)])
-
-  [[1 2]]
-
-  (z/zipper (constantly true)
-            rest
-            (fn [_ c] c) [1])
-
-  (make-node [[:a :b] []]
-             [[[:1 :2] []]
-              [[:4 :5] []]])
-
-  (def zp (z/vector-zip [1]))
-  (z/vector-zip '[5 [10 20 30] [1 2 3]])
-  (def zp (z/zipper branch? children make-node [[-1 -1] []]))
-
-  (z/insert-child zp [9 9])
-  zp
-
-  ([[:1 :1] [[[:ch :ch] []] [[:ch2 :ch2] []]]]
-   [[-1 -1] [[[:3 :3] []] [[:2 :2] []] [[:1 :1] []]]])
-
-
-;; The above can also be written like this using the thread macro style
-  (-> {:tag :root
-       :pos [2 3]
-       :content [{:tag :any
-                  :pos [6 7] :content [[:tag :any]]}]}
-      z/xml-zip
-      z/down
-      z/node)
-
-  (-> {:pos [1 2]
-       :content [{:pos [2 3]}
-                 {:pos [2 5]
-                  :content [{:pos [3 7]}]}]}
-      z/xml-zip
-      z/next
-      z/next
-      z/next
-      #_(z/append-child {:pos [8 8]})
-      #_(z/append-child {:pos [0 0] :content [[:pos [11 22]]]})
-      z/next
-      z/node)
-
-  (def loc {:pos false
-            :content [{:pos [1 2]}
-                      {:pos [4 2]
-                       :content [{:pos [999 888]}]}
-                      {:pos [6 8]}]})
-  (-> (z/xml-zip loc)
-      z/down
-      z/branch?)
-
-  (->> (z/xml-zip loc)
-       (iterate z/next)
-       (take-while (complement z/end?))
-       (filter   #(zero? (count (z/children %))))
-       (map (comp :pos z/node)))
-
-
-  ;;
-  )
-
