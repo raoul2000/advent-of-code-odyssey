@@ -243,3 +243,41 @@
   ;; => 593 ⭐
   ;;
   )
+
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; - trailhead rating
+;; - rating : is the number of distinct hiking trails which begin at that trailhead
+
+;; From solution-1 we already have a list of all trails in the loc
+;; Let's simply count trails for each trailhead
+
+(defn solution-2 [input]
+  (->> (create-grid input)
+       find-all-trails
+       ;; navigate depth first
+       (iterate z/next)
+       ;; .. until all nodes have been visited
+       (take-while (complement z/end?))
+       ;; only keep locs of lead nodes (height = 9)
+       (filter #(= 9 (node-height (z/node %))))
+       ;; create path to trail head
+       (map build-path)
+       ;; create map where k is trail head and val is a seq
+       ;; of all steps
+       (group-by first)
+       (map (fn [[k v]]
+              [k (count v)]))
+       (map (fn [[k cnt]]
+              cnt))
+       (reduce +)))
+
+(comment
+  (solution-2 sample-input)
+  ;; => 81 .. good
+  (solution-2 puzzle-input)
+  ;; => 1192 ⭐⭐
+
+  ;; That was a fast one !! 😊
+
+;;
+  )
