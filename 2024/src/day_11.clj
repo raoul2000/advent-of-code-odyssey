@@ -71,21 +71,49 @@
        (map apply-rules)
        flatten))
 
-(defn solution-1 [input]
+(defn solution-1 [input blink-count]
   (->> (s/split input #" ")
        (iterate blink)
-       (take (inc 25))
+       (take (inc blink-count))
        last
        count))
 
 (comment
 
-  (solution-1 sample-input)
+  (solution-1 sample-input 25)
   ;; => 55312 .. good
 
-  (solution-1 puzzle-input)
+  (solution-1 puzzle-input 25)
   ;; => 193899 ⭐
-  
+
 
   ;;
   )
+
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; - blink 75 times !!
+
+(comment
+  (time (solution-1 sample-input 25))
+  ; "Elapsed time: 302.4543 msecs"
+  (time (solution-1 sample-input 30))
+  ; "Elapsed time: 2996.1022 msecs"
+  (time (solution-1 sample-input 35))
+  ; "Elapsed time: 28380.8791 msecs"
+
+  ;; so, from 0.3s to 3s to 28s ... by a step of +5 💥
+  ;; we must optimize
+
+  ;;
+  )
+
+(comment
+
+  (->> (s/split "1" #" ")
+       (iterate blink)
+       (take (inc 5))
+       
+       )
+       
+       ;;
+       )
