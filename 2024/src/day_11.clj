@@ -108,12 +108,110 @@
   )
 
 (comment
+;; stone = [1]
+;; initial state 
+;; {1     { :count 1
+;;          :next [2024]}}
+;;
+  (def initial-state {1 {:count 1 :next [2024]}})
+  ;; => 1
+  ;; after one blink
+  (def blink-1 {1    {:count 0 :next [2024]}
+                2024 {:count 1 :next [20 24]}})
+  ;; => 2024
+
+  ;; blink 2 ----------------------------
+  (def blink-2 {1    {:count 0 :next [2024]}
+                2024 {:count 0 :next [20 24]}
+                20   {:count 1 :next [2 0]}
+                24   {:count 1 :next [2 4]}})
+  ;; => 20 24
+
+  ;; blink 3 ----------------------------
+  (def blink-3 {1    {:count 0 :next [2024]}
+                2024 {:count 0 :next [20 24]}
+                20   {:count 0 :next [2 0]}
+                24   {:count 0 :next [2 4]}
+                2    {:count 2 :next [4048]}
+                0    {:count 1 :next [1]}
+                4    {:count 1 :next [8096]}})
+  ;; => 2 0 2 4
+
+  ; blink 4 -------------------------------
+  (def blink-4 {1    {:count 1 :next [2024]}
+                2024 {:count 0 :next [20 24]}
+                20   {:count 0 :next [2 0]}
+                24   {:count 0 :next [2 4]}
+                2    {:count 0 :next [4048]}
+                0    {:count 0 :next [1]}
+                4    {:count 0 :next [8096]}
+                4048 {:count 2 :next [40 48]}
+                8096 {:count 1 :next [80 96]}})
+  ;; => 4048 1 4048 8096
+
+  ;; blink 5 ---------------------------------
+  (def blink-5 {1    {:count 0 :next [2024]}
+                2024 {:count 1 :next [20 24]}
+                20   {:count 0 :next [2 0]}
+                24   {:count 0 :next [2 4]}
+                2    {:count 0 :next [4048]}
+                0    {:count 0 :next [1]}
+                4    {:count 0 :next [8096]}
+                4048 {:count 0 :next [40 48]}
+                8096 {:count 0 :next [80 96]}
+                40   {:count 2 :next [4 0]}
+                48   {:count 2 :next [4 8]}
+                80   {:count 1 :next [8 0]}
+                96   {:count 1 :next [9 6]}})
+  ; => 40 48 2024 40 48 80 96
+
+  ;; blink 6 -------------------------------
+  (def blink-6 {1    {:count 0 :next [2024]}
+                2024 {:count 0 :next [20 24]}
+                20   {:count 1 :next [2 0]}
+                24   {:count 1 :next [2 4]}
+                2    {:count 0 :next [4048]}
+                0    {:count 3 :next [1]}
+                4    {:count 4 :next [8096]}
+                4048 {:count 0 :next [40 48]}
+                8096 {:count 0 :next [80 96]}
+                40   {:count 0 :next [4 0]}
+                48   {:count 0 :next [4 8]}
+                80   {:count 0 :next [8 0]}
+                96   {:count 0 :next [9 6]}
+                8    {:count 3 :next [16192]}
+                9    {:count 1 :next [18216]}
+                6    {:count 1 :next [12144]}})
+  ;; => 4 0 4 8 20 24 4 0 4 8 8 0 9 6
+
+  ;; blink 7 --------------------------------
+  (def blink-7 {1    {:count 3 :next [2024]}
+                2024 {:count 0 :next [20 24]}
+                20   {:count 0 :next [2 0]}
+                24   {:count 0 :next [2 4]}
+                2    {:count 2 :next [4048]}
+                0    {:count 1 :next [1]}
+                4    {:count 1 :next [8096]}
+                4048 {:count 0 :next [40 48]}
+                8096 {:count 4 :next [80 96]}
+                40   {:count 0 :next [4 0]}
+                48   {:count 0 :next [4 8]}
+                80   {:count 0 :next [8 0]}
+                96   {:count 0 :next [9 6]}
+                8    {:count 0 :next [16192]}
+                9    {:count 0 :next [18216]}
+                6    {:count 0 :next [12144]}
+                16192 {:count 3 :next [2772608]}
+                18216 {:count 1 :next [36869184]}
+                12144 {:count 1 :next [24579456]}})
+  ;; => 8096 1 8096 16192 2 0 2 4 8096 1 8096 16192 16192 1 18216 12144
+  
+  ;; why not remove all :count = 0 beteween each blink ?
+
 
   (->> (s/split "1" #" ")
        (iterate blink)
-       (take (inc 5))
-       
-       )
-       
+       (take (inc 5)))
+
        ;;
-       )
+  )
