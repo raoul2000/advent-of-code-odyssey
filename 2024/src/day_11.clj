@@ -1,5 +1,6 @@
 (ns day-11
-  (:require [clojure.string :as s]))
+  (:require [clojure.string :as s]
+            [clojure.set :as st]))
 
 ;; https://adventofcode.com/2024/day/11
 
@@ -104,14 +105,24 @@
   ;; so, from 0.3s to 3s to 28s ... by a step of +5 💥
   ;; we must optimize
 
+  ;; we see that after 25 blinks we have 55312 stones but in fact only 54 unique stone numbers
+  ;; for puzzle input, 193899 stones but 396 unique stone numbers !!
+
+  (def freq-1 (->> (s/split sample-input #" ")
+                   (iterate blink)
+                   (take (inc 25))
+                   last
+                   set
+                   count))
+
   ;;
   )
 
 (comment
-;; stone = [1]
-;; initial state 
-;; {1     { :count 1
-;;          :next [2024]}}
+  
+  ;; let's think of a new way to represent all the stones.
+  ;; As we only need to find the total number of stones we can
+  ;; use a map to represent a summary of the stones in some sort of condensed form
 ;;
   (def initial-state {1 {:count 1 :next [2024]}})
   ;; => 1
@@ -205,13 +216,53 @@
                 18216 {:count 1 :next [36869184]}
                 12144 {:count 1 :next [24579456]}})
   ;; => 8096 1 8096 16192 2 0 2 4 8096 1 8096 16192 16192 1 18216 12144
-  
+
+  ;; let's make it more simple :
+
   ;; why not remove all :count = 0 beteween each blink ?
+  ;; ... and why use this :next key ? ... the next values could be computed on demand as I assume it
+  ;; is not really time consuming.
 
+  ;; ok to simplify we will be using a map where :
+  ;; - key : is a string representing the number engraved in a stone
+  ;; - val : the number of stones that exists with this engraved number
 
-  (->> (s/split "1" #" ")
-       (iterate blink)
-       (take (inc 5)))
+  ;; exemple
+  {"1024" 2
+   "0"    1
+   "10"   5}
 
        ;;
+  )
+
+
+(defn create-stones-map [input]
+  (->> (s/split input #" ")
+       (map #(vector % 1))
+       (into {})))
+
+(defn blink-stone [stones-map]
+  (apply merge-with + (map (fn [[k v]]
+                             (->> (apply-rules k)
+                                  frequencies
+                                  (map (fn [[next-n cnt]]
+                                         (vector next-n (* cnt v))))
+                                  (into {}))) stones-map)))
+
+(defn solution-2 [input]
+  (->>  (create-stones-map input)
+        (iterate blink-stone)
+        (take (inc 75))
+        last
+        (map second)
+        (reduce +)))
+
+(comment
+
+  (solution-2 puzzle-input)
+  ;; => 229682160383225 ⭐⭐
+
+  ;; bingo !
+
+  ;;
   )
