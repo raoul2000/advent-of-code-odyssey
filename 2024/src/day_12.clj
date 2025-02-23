@@ -106,9 +106,27 @@ MMMISSJEEE
 
 (comment
   (def garden (create-garden puzzle-input))
+  (print-garden (set-at-pos garden [50 0] \_))
+
   (def garden (create-garden sample-input-1))
 
-  (print-garden (set-at-pos garden [50 0] \_))
+  (defn zoom [garden zoom-factor]
+    (reduce (fn [acc row]
+              (let [col-gap   (apply str (repeat (dec zoom-factor) "."))
+                    inner-row (->> row
+                                   (interpose col-gap)
+                                   (apply str)
+                                   )
+                    with-margin (str "." inner-row ".")]
+                (conj acc with-margin))) [] garden))
+
+  (print-garden (zoom garden 2))
+  (str "." "rrr")
+  (repeat 2 ".")
+  (conj [] [1 2] [4 5])
+
+
+  (apply str (interpose "." "ABC"))
 
   (print-garden garden)
   (print-garden (mark-region garden (region-at-pos garden [20 20]) \.))
@@ -207,6 +225,106 @@ MMMISSJEEE
 
   (solution-1 puzzle-input)
   ;; => 1431440 ..yess ! ⭐
+  )
+
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; introducing the fence bulk-discount
+;; - count fence side instead of fence unit
+
+(comment
+  (def garden (create-garden sample-input-1))
+  (map create-fence (find-all-regions garden))
+
+;; given a fence represented as a seq of pos a side is a sub seq having same x (or y)
+
+  (def reg-1 '([-1 0] [0 1] [0 -1] [1 1] [1 -1] [4 0] [3 1] [3 -1] [2 1] [2 -1]))
+
+  ;; group by x
+  ;; map fo fences :
+  ;; - k : x coord for starting horiz fence
+  ;; - v : pos of this horiz fence (possibly not consecutive)
+  (group-by first reg-1)
+
+  ;; group-by y
+  ;; map of all vertical fences
+  (group-by second reg-1)
+
+;; ..and consecutive y (or x)
+
+;; sort by y
+  (def fence-1 [[1 2] [1 -1] [1 3]])
+  (sort-by second fence-1)
+
+  (->> fence-1
+       (sort-by second)
+       (reduce (fn [res [x y]]
+                 (if-let [prev-side (last res)]
+                   ;; there is a side being built
+                   (let [[_x last-fence-y] (last prev-side)]
+                     (if (= (inc last-fence-y) y)
+                     ;; add tu prev side
+                       (-> res
+                           butlast
+                           (conj (conj prev-side [x y])))
+                       ;; start a new side   
+                       (-> res
+                           (conj [[x y]]))))
+                   ;; first side start
+                   (conj res [[x y]]))) []))
+
+  ;; we could use the same reducer for both x and y axis
+  ;; let"s re-write
+
+
+  (defn successive-fences-horiz? [[f1-x _f1-y]  [f2-x _f2-y]]
+    (= (inc f1-x) f2-x))
+  (defn successive-fences-vertical? [[_f1-x f1-y]  [_f2-x f2-y]]
+    (= (inc f1-y) f2-y))
+
+
+  (defn fence-side-reducer [successive-fences?]
+    (fn [res [x y]]
+      (if-let [prev-side (last res)]
+        (if (successive-fences? (last prev-side) [x y])
+          ;; add to prev side
+          (-> res
+              butlast
+              (conj (conj prev-side [x y])))
+          ;; start a new side   
+          (-> res
+              (conj [[x y]])))
+         ;; first side start
+        (conj res [[x y]]))))
+
+
+  ;; horozontal sides for fence-1
+  (->> fence-1
+       (sort-by first)
+       (reduce  (fence-side-reducer successive-fences-horiz?) [])
+       #_count)
+
+  ;; vertical sides for fence-1
+  (->> fence-1
+       (sort-by second)
+       (reduce  (fence-side-reducer successive-fences-vertical?) [])
+       #_count)
+
+    ;; all remaining fences of length 1 (i.e. not involved in any side)
+    ;; must be de-dup because they are counted once for vertical and once for horiz
+
+
+
+
+  (partition-by inc [1 3 4])
+
+
+
+
+
+
+
+
+;;
   )
 
 
