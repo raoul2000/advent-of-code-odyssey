@@ -115,8 +115,7 @@ MMMISSJEEE
               (let [col-gap   (apply str (repeat (dec zoom-factor) "."))
                     inner-row (->> row
                                    (interpose col-gap)
-                                   (apply str)
-                                   )
+                                   (apply str))
                     with-margin (str "." inner-row ".")]
                 (conj acc with-margin))) [] garden))
 
@@ -274,58 +273,99 @@ MMMISSJEEE
 
   ;; we could use the same reducer for both x and y axis
   ;; let"s re-write
+  )
+
+(defn successive-fences-horiz? [[f1-x _f1-y]  [f2-x _f2-y]]
+  (= (inc f1-x) f2-x))
+(defn successive-fences-vertical? [[_f1-x f1-y]  [_f2-x f2-y]]
+  (= (inc f1-y) f2-y))
 
 
-  (defn successive-fences-horiz? [[f1-x _f1-y]  [f2-x _f2-y]]
-    (= (inc f1-x) f2-x))
-  (defn successive-fences-vertical? [[_f1-x f1-y]  [_f2-x f2-y]]
-    (= (inc f1-y) f2-y))
-
-
-  (defn fence-side-reducer [successive-fences?]
-    (fn [res [x y]]
-      (if-let [prev-side (last res)]
-        (if (successive-fences? (last prev-side) [x y])
+(defn fence-side-reducer [successive-fences?]
+  (fn [res [x y]]
+    (if-let [prev-side (last res)]
+      (if (successive-fences? (last prev-side) [x y])
           ;; add to prev side
-          (-> res
-              butlast
-              (conj (conj prev-side [x y])))
+        (-> res
+            butlast
+            (conj (conj prev-side [x y])))
           ;; start a new side   
-          (-> res
-              (conj [[x y]])))
+        (-> res
+            (conj [[x y]])))
          ;; first side start
-        (conj res [[x y]]))))
+      (conj res [[x y]]))))
 
 
+(comment
   ;; horozontal sides for fence-1
-  (->> fence-1
-       (sort-by first)
-       (reduce  (fence-side-reducer successive-fences-horiz?) [])
-       #_count)
+  (def horiz-sides (->> fence-1
+                        (sort-by first)
+                        (reduce  (fence-side-reducer successive-fences-horiz?) [])))
 
   ;; vertical sides for fence-1
-  (->> fence-1
-       (sort-by second)
-       (reduce  (fence-side-reducer successive-fences-vertical?) [])
-       #_count)
+  (def vert-sides (->> fence-1
+                       (sort-by second)
+                       (reduce  (fence-side-reducer successive-fences-vertical?) [])))
 
     ;; all remaining fences of length 1 (i.e. not involved in any side)
     ;; must be de-dup because they are counted once for vertical and once for horiz
 
-
-
-
-  (partition-by inc [1 3 4])
-
-
-
-
-
-
-
+  (count (set (concat horiz-sides vert-sides)))
 
 ;;
   )
 
+(defn compute-fence-side-price [region]
+  (let [fences (create-fence region)
+        horiz-sides (->> fences
+                         (sort-by first)
+                         (reduce  (fence-side-reducer successive-fences-horiz?) []))
+        vert-sides (->> fences
+                        (sort-by second)
+                        (reduce  (fence-side-reducer successive-fences-vertical?) []))]
+    #_(concat horiz-sides vert-sides)
+    #_{:h horiz-sides
+       :v vert-sides}
+    (->> (reduce (fn [acc side]
+              (if (>  (count side) 1)
+                (update acc :sides  conj side)
+                (update acc :fences conj (first side))))
+            {:sides []
+             :fences #{}}
+            (concat horiz-sides vert-sides))
+         (map #(count (second %)))
+         
+         )))
+
+(comment
+  (->> (create-garden sample-input-1)
+       find-all-regions
+       (map compute-fence-side-price))
+
+  (->> '([[-1 0] [0 1] [1 1] [2 1] [3 1] [4 0]]
+         [[0 -1] [1 -1] [2 -1] [3 -1]]
+         [[2 1]]
+         [[3 1]]
+         [[1 1]]
+         [[0 1]]
+         [[3 -1] [4 0]]
+         [[2 -1] [-1 0]]
+         [[0 -1]]
+         [[1 -1]])
+       (reduce (fn [acc side]
+                 (if (>  (count side) 1)
+                   (update acc :s conj side)
+                   (update acc :f conj (first side)))) {:s [] :f #{}}))
+  ;;
+  )
+
+
+
+(defn solution-2 [input]
+  (->> (create-garden input)
+       find-all-regions
+       (map (juxt count compute-fence-side-price))
+       (map #(apply * %))
+       (reduce +)))
 
 
