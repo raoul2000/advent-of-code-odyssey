@@ -236,7 +236,7 @@ MMMISSJEEE
   (map create-fence (find-all-regions garden))
 
 ;; given a fence represented as a seq of pos a side is a sub seq having same x (or y)
-  
+
   (def reg-1 #{[0 0] [1 0] [3 0] [2 0]})
   (def fences-1 (create-fence reg-1))
 
@@ -249,7 +249,7 @@ MMMISSJEEE
   ;; => {-1 [[-1 0]], 0 [[0 1] [0 -1]], 1 [[1 1] [1 -1]], 4 [[4 0]], 3 [[3 1] [3 -1]], 2 [[2 1] [2 -1]]}
   ;; We have 2  single fences (on x = -1, 4)  for sure they are not sides
   ;; ...and 4 Double fences ofr x = 0, 1 3 2 ...they are potential sides
-  
+
   ;; group-by y (horizontal fences)
   ;; map of fences :
   (group-by second fences-1)
@@ -257,10 +257,10 @@ MMMISSJEEE
   ;; We have one group of 2 fences on y = 0 
   ;; ... and 2 groups of 4 fences for y = 1 and y = -1
   ;; So we may have up to 3 sides
-  
+
   ;; how to find if a seq of fences pos having the same x (or y) coordinates, are consecutive ?
   ;; Or in other words, how to find all sub sequence of fence consecutive x (or y) coordinates ?
-  
+
   (def x-coord first)
   (def y-coord second)
 
@@ -290,13 +290,13 @@ MMMISSJEEE
   (f-side (sort-by x-coord [[0 1] [1 1] [4 1] [3 1]]))
   ;; => ([[4 1]] [[3 1]] [[0 1] [1 1]])
   ;; We get 2 sides
-  
+
   ;; ..and now with no sides at all
   (f-side (sort-by x-coord [[0 1] [6 1] [4 1] [2 1]]))
   ;; 4 items => no sides found here
-  
-;; to do the same for vertical sides, rewrite the function
-  (defn f-side-2 [fences axis-fn]
+
+  ;; let's parametrize our function to accept axis (horiz or vertical)
+  (defn f-side-2 [axis-fn fences-by-axis]
     (reduce (fn [acc fence]
               (if (empty? acc)
                 ;; the first side
@@ -311,149 +311,131 @@ MMMISSJEEE
                     ;; not consecutive : start new side
                     (conj acc [fence])))))
             []
-            (sort-by axis-fn fences)))
-  
-  (f-side-2 [[0 1] [1 1] [4 1] [3 1]] x-coord)
-  (f-side-2 [[0 1] [6 1] [4 1] [2 1]] x-coord)
+            (sort-by axis-fn fences-by-axis)))
+
+  (f-side-2 x-coord [[0 1] [1 1] [3 1] [2 1]])
+  (f-side-2 x-coord [[0 1] [6 1] [4 1] [2 1]])
     ;; let's try with vertical sides
-  (f-side-2 [[2 1] [2 -1]] y-coord)
-  (f-side-2 [[2 1] [2 0] [2 4] [2 3]] y-coord)
+  (f-side-2 x-coord [[2 1] [2 -1]])
+  (f-side-2 x-coord [[2 1] [2 0] [2 4] [2 3]])
+  (f-side-2 x-coord [[-1 0] [4 0]])
 
-
-  
-  (f-side-2 [[-1 0]] x-coord)
+  (f-side-2 x-coord [[-1 0]])
     ;; good !
-  
+
     ;; Now , for a given region we can get its fences and from it, all the horizontal and vertical sides
-  (let [fences (create-fence reg-1)
-        horiz-sides (f-side-2 fences x-coord)
-        vert-sides  (f-side-2 fences y-coord)
-        ]
-    {:h horiz-sides
-     :v vert-sides}
-    #_(concat horiz-sides vert-sides)
-    )
-  
 
+  (def reg-3 #{[0 0] [1 0] [3 0] [2 0] [0 1] [1 1]})
+  (def h-sides (->> (create-fence reg-3)
+                    (group-by y-coord)
+                    (map second)
+                    ;; keep only fences having the same y-coord
+                    (remove #(= 1 (count  %)))
+                    ;; sides are fences with successive x-coord
+                    (map #(f-side-2 x-coord %))
+                    ;; aggregate sides parts with a length > 1 : they are sides
+                    (reduce (fn [acc sides-parts]
+                              (->> sides-parts
+                                   (remove #(= 1 (count %)))
+                                   (into acc))) [])
+                    (remove empty?)))
+   ;; h-sides => ([[0 -1] [1 -1] [2 -1] [3 -1]] [[2 1] [3 1]] [[0 2] [1 2]])
+   ;; This is correct : the region 3 contains 3 horizontal sides 
+   ;; Now we must count remaining fences : they are simple not involved in sides
 
+  (def sides-items (reduce into #{} h-sides))
+  (->> (create-fence reg-3)
+       (remove sides-items))
 
+  ;; actually we should find vertical sides, merge them with horiz sides
+  ;; and remove fences not involved in one of them
 
-;; ..and consecutive y (or x)
-  
-;; sort by y
-  (def fence-1 [[1 2] [1 -1] [1 3]])
-  (sort-by second fence-1)
+  ;; let's turn above form into a parametrized function
+  (defn find-sides [region group-fn axis-fn]
+    (->> (create-fence region)
+         (group-by group-fn)
+         (map second)
+                      ;; keep only fences having the same y-coord
+         (remove #(= 1 (count  %)))
+                      ;; sides are fences with successive x-coord
+         (map #(f-side-2 axis-fn %))
+                      ;; aggregate sides parts with a length > 1 : they are sides
+         (reduce (fn [acc sides-parts]
+                   (->> sides-parts
+                        (remove #(= 1 (count %)))
+                        (into acc))) [])
+         (remove empty?)))
 
-  (->> fence-1
-       (sort-by second)
-       (reduce (fn [res [x y]]
-                 (if-let [prev-side (last res)]
-                   ;; there is a side being built
-                   (let [[_x last-fence-y] (last prev-side)]
-                     (if (= (inc last-fence-y) y)
-                     ;; add tu prev side
-                       (-> res
-                           butlast
-                           (conj (conj prev-side [x y])))
-                       ;; start a new side   
-                       (-> res
-                           (conj [[x y]]))))
-                   ;; first side start
-                   (conj res [[x y]]))) []))
+    ;; and 2 helper functions
+  (defn find-horizontal-sides [region]
+    (find-sides region y-coord x-coord))
 
-  ;; we could use the same reducer for both x and y axis
-  ;; let"s re-write
+  (defn find-vertical-sides [region]
+    (find-sides region x-coord y-coord))
+
+  ;; let's test
+  (find-horizontal-sides reg-3)
+  (find-vertical-sides reg-3)
+  ;; good !
+
+  ;; now merge them into a set
+  (def fences-in-sides (reduce into #{} (concat (find-horizontal-sides reg-3) (find-vertical-sides reg-3))))
+
+  ;; ...and find fences not involved
+  (->> (create-fence reg-3)
+       (remove fences-in-sides))
+  ;; => ([4 0]) .. correct
+
+  ;; good, let's write some code now 
+
+;
   )
 
-(defn sides
-  "Given a `region` provided as a set of coords, returns a seq of all sides aounrd this region.
-   Sides with a length of 1 are simple fences."
-  [region])
+(def x-coord first)
+(def y-coord second)
 
-(defn successive-fences-horiz? [[f1-x _f1-y]  [f2-x _f2-y]]
-  (= (inc f1-x) f2-x))
-(defn successive-fences-vertical? [[_f1-x f1-y]  [_f2-x f2-y]]
-  (= (inc f1-y) f2-y))
+(defn group-by-side [axis-fn fences-by-axis]
+  (reduce (fn [acc fence]
+            (if (empty? acc)
+                ;; the first side
+              (conj acc [fence])
+                ;; is this fence consecutive to the last fence of the last side ?
+              (let [prev-fence (last (last acc))]
+                (if (= (inc (axis-fn prev-fence)) (axis-fn fence))
+                  ;; consecutive
+                  (-> acc
+                      butlast
+                      (conj (conj (last acc) fence)))
+                    ;; not consecutive : start new side
+                  (conj acc [fence])))))
+          []
+          (sort-by axis-fn fences-by-axis)))
 
+  ;; let's turn above form into a parametrized function
+(defn find-sides [region group-fn axis-fn]
+  (->> (create-fence region)
+       (group-by group-fn)
+       (map second)
+       ;; keep only fences having the same y-coord
+       (remove #(= 1 (count  %)))
+       ;; sides are fences with successive x-coord
+       (map #(group-by-side axis-fn %))
+       ;; aggregate sides parts with a length > 1 : they are sides
+       (reduce (fn [acc sides-parts]
+                 (->> sides-parts
+                      (remove #(= 1 (count %)))
+                      (into acc))) [])
+       (remove empty?)))
 
-(defn fence-side-reducer [successive-fences?]
-  (fn [res [x y]]
-    (if-let [prev-side (last res)]
-      (if (successive-fences? (last prev-side) [x y])
-          ;; add to prev side
-        (-> res
-            butlast
-            (conj (conj prev-side [x y])))
-          ;; start a new side   
-        (-> res
-            (conj [[x y]])))
-         ;; first side start
-      (conj res [[x y]]))))
+    ;; and 2 helper functions
+(defn find-horizontal-sides [region]
+  (find-sides region y-coord x-coord))
 
+(defn find-vertical-sides [region]
+  (find-sides region x-coord y-coord))
 
-(comment
-  ;; horozontal sides for fence-1
-  (def horiz-sides (->> fence-1
-                        (sort-by first)
-                        (reduce  (fence-side-reducer successive-fences-horiz?) [])))
-
-  ;; vertical sides for fence-1
-  (def vert-sides (->> fence-1
-                       (sort-by second)
-                       (reduce  (fence-side-reducer successive-fences-vertical?) [])))
-
-    ;; all remaining fences of length 1 (i.e. not involved in any side)
-    ;; must be de-dup because they are counted once for vertical and once for horiz
-
-  (count (set (concat horiz-sides vert-sides)))
-
-;;
-  )
-
-(defn compute-fence-side-price [region]
-  (let [fences (create-fence region)
-        horiz-sides (->> fences
-                         (sort-by first)
-                         (reduce  (fence-side-reducer successive-fences-horiz?) []))
-        vert-sides (->> fences
-                        (sort-by second)
-                        (reduce  (fence-side-reducer successive-fences-vertical?) []))]
-    {:h horiz-sides
-     :v vert-sides}
-    #_(->> (reduce (fn [acc side]
-                     (if (>  (count side) 1)
-                       (update acc :sides  conj side)
-                       (update acc :fences conj (first side))))
-                   {:sides []
-                    :fences #{}}
-                   (concat horiz-sides vert-sides))
-           #_(map #(count (second %))))))
-
-(comment
-  (print-garden (create-garden sample-input-1))
-
-  (->> (create-garden sample-input-1)
-       find-all-regions
-       #_(map compute-fence-side-price))
-
-  (compute-fence-side-price #{[0 0] [1 0] [3 0] [2 0]})
-  (->> '([[-1 0] [0 1] [1 1] [2 1] [3 1] [4 0]]
-         [[0 -1] [1 -1] [2 -1] [3 -1]]
-         [[2 1]]
-         [[3 1]]
-         [[1 1]]
-         [[0 1]]
-         [[3 -1] [4 0]]
-         [[2 -1] [-1 0]]
-         [[0 -1]]
-         [[1 -1]])
-       (reduce (fn [acc side]
-                 (if (>  (count side) 1)
-                   (update acc :s conj side)
-                   (update acc :f conj (first side)))) {:s [] :f #{}}))
-  ;;
-  )
-
+(defn fences-in-sides [horiz-sides vertical-sides]
+  (reduce into #{} (concat horiz-sides vertical-sides)))
 
 
 (defn solution-2 [input]
