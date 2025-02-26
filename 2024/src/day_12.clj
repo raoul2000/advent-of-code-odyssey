@@ -383,7 +383,7 @@ MMMISSJEEE
 
   ;; ...and find fences not involved
   (->> (create-fence reg-3)
-       (remove fences-in-sides))
+       (remove (partial fences-in-sides [])))
   ;; => ([4 0]) .. correct
 
   ;; good, let's write some code now 
@@ -437,12 +437,66 @@ MMMISSJEEE
 (defn fences-in-sides [horiz-sides vertical-sides]
   (reduce into #{} (concat horiz-sides vertical-sides)))
 
+(defn describe-fences-and-sides [region]
+  (let [all-fences       (create-fence region)
+        horizontal-sides (find-horizontal-sides region)
+        vertical-sides   (find-vertical-sides region)
+        occupied-fences  (fences-in-sides horizontal-sides vertical-sides)]
+    {:all-fences all-fences
+     :h horizontal-sides
+     :v vertical-sides
+     :occ occupied-fences}))
+
+(defn compute-fence-side-price [region]
+  (let [{:keys [all-fences h v occ]} (describe-fences-and-sides region)
+        standalone-fences (remove occ all-fences)]
+    (+ (count h)
+       (count v)
+       (count standalone-fences))))
+
 
 (defn solution-2 [input]
   (->> (create-garden input)
        find-all-regions
+       #_(map compute-fence-side-price)
        (map (juxt count compute-fence-side-price))
        (map #(apply * %))
        (reduce +)))
 
+(comment
+  (solution-2 sample-input-1)
+  ;; => 80 good
 
+  (solution-2 sample-input-2)
+  ;; => 436 better
+
+  (solution-2 sample-input-3)
+  ;; => 1073 .. not good
+
+  (solution-2 "AAAAAA
+AAABBA
+AAABBA
+ABBAAA
+ABBAAA
+AAAAAA
+")
+
+;; => 592 .. nooooo 😭
+  )
+
+(comment
+
+  (def sample-input-4 "AAAAAA
+AAABBA
+AAABBA
+ABBAAA
+ABBAAA
+AAAAAA
+")
+
+  (def reg-A (first (find-all-regions (create-garden sample-input-3))))
+  (find-horizontal-sides reg-A)
+  (set (find-horizontal-sides reg-A))
+  (find-vertical-sides reg-A)
+  ;;
+  )
