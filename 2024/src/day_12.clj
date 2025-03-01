@@ -498,5 +498,36 @@ AAAAAA
   (find-horizontal-sides reg-A)
   (set (find-horizontal-sides reg-A))
   (find-vertical-sides reg-A)
+
+;; I guess the whole solution above for part 2, is wrong because it doesn't work
+;; in the case of inner sides, in particular when the inner space is 1 unit large;
+
+  (def sample-input-5 "AAAA
+AABA
+ABAA
+AAAA
+")
+
+  (->> sample-input-5
+       create-garden
+       find-all-regions)
+
+  ;; this is the region with 'A'
+  (def reg-4 #{[2 2] [0 0] [1 0] [2 3] [3 3] [1 1] [3 0] [1 3] [0 3] [0 2] [2 0] [3 1] [3 2] [0 1]})
+
+  ;; and the fences for this region is wrong
+  (create-fence reg-4)
+  ;; is it because of inner spaces ? lets' add b positions
+  (def reg-4-filled #{[2 1] [1 2] [2 2] [0 0] [1 0] [2 3] [3 3] [1 1] [3 0] [1 3] [0 3] [0 2] [2 0] [3 1] [3 2] [0 1]})
+  (create-fence reg-4-filled)
+  ;; yes, when the region contains no inner space, fences computation is ok
+  ;; but when there are inner spaces, it is not.
+
+  ;; soooo ... the whole solution-2 (that involves stuff from solution-1) should be reviewed
+  ;; we will do that on anoter ns
+
+  ;; meet you there 🖖
+  
+
   ;;
   )
