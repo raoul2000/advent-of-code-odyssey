@@ -122,7 +122,7 @@ MMMISSJEEE
   (update-garden garden region \.))
 
 (defn find-all-regions
-  "Given a `initial-garden` returns a seq of all regions in thie garden."
+  "Given a `initial-garden` returns a seq of all regions in this garden."
   [initial-garden]
   (:regions (reduce (fn [{:keys [garden] :as state} pos]
                       (if (already-visited? garden pos)
@@ -138,12 +138,48 @@ MMMISSJEEE
 ;; now, to represent a fence we are not going to use the [x y] pos of the fence (that could
 ;; overlap on thin inner spaces) but a triplet [x y DIR] 
 ;; - x , y : the pos of the plant int he region
-;; - DIR : one of :up :down :left :rightthe direction pointing to the fence relatively to the plant
+;; - DIR : one of :up :down :left :right the direction pointing to the fence relatively to the plant
 ;;
 ;; for example : 
 ;; [0 0 :left]  => fence pos [-1 0]
 ;; [0 0 :right] => fence pos [1  0]
 ;; [0 0 :up]    => fence pos [0 -1]
 ;; [0 0 :down]  => fence pos [0  1]
+;;
+;; If in a fence list we have : [0 1 :up] [1 1 :up] [2 1 :up]
+;; ..then we have a side, horizontal, made of 3 fences
+;; If we have [0 1 :down] [1 1 :down] [2 1 :down]
+;; ... then we have a side, horizontal too, made of 3 fences
+;; If we have : [1 0 :left] [1 1 :left]
+;; ... then we have a side, vertical made of 2 fences
 
+;; Ok. Given a region, let's find all fences
 
+(def coords butlast)
+(def x-coord first)
+(def y-coord second)
+(def direction last)
+
+(defn touching-pos-with-dir-xs [[x y]]
+  [[(inc x) y :right] [(dec x) y :left] [x (inc y) :down] [x (dec y) :up]])
+
+(defn find-fences
+  "Find and returns a set of fences for the given `region` in the given `garden`"
+  [garden region]
+  (let [plant (plant-at garden (first region))]
+    (->> region
+         (map (juxt identity touching-pos-with-dir-xs))
+         (map (fn [[reg-pos adjacents]]
+                (filter  (fn [adj]
+                           (complement (region (coords adj)))
+                           ) adjacents)
+                ))
+         )))
+
+(comment
+
+  (find-fences (create-garden sample-input-1)
+               #{[0 0] [1 0] [3 0] [2 0]})
+  (touching-pos-xs [0 1])
+  ;;
+  )
