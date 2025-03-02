@@ -153,33 +153,276 @@ MMMISSJEEE
 ;; If we have : [1 0 :left] [1 1 :left]
 ;; ... then we have a side, vertical made of 2 fences
 
-;; Ok. Given a region, let's find all fences
+;; Wait, maybe something more simple. What if we set coordinates of a fence at - 0.25 or + 0.25 ?
+;; For example 
+;; [-0.25   0] left vertical fence
+;; [ 0.25   0] right vertical fence
+;; [ 0   0.25] bottom horizontal fence
+;; [ 0  -0.25] top horizontal fence
 
-(def coords butlast)
+
 (def x-coord first)
 (def y-coord second)
-(def direction last)
 
-(defn touching-pos-with-dir-xs [[x y]]
-  [[(inc x) y :right] [(dec x) y :left] [x (inc y) :down] [x (dec y) :up]])
+(defn outside-region? [region [x y]]
+  (not (region [x y])))
+
+(defn region-pos->fences [region [x y]]
+  (cond-> []
+    (outside-region? region [(dec x) y]) (conj  [(- x 0.25) y]) ;; left
+    (outside-region? region [(inc x) y]) (conj  [(+ x 0.25) y]) ;; right
+    (outside-region? region [x (dec y)]) (conj  [x (- y 0.25)]) ;; up
+    (outside-region? region [x (inc y)]) (conj  [x (+ y 0.25)]) ;; bottom
+    ))
+
 
 (defn find-fences
-  "Find and returns a set of fences for the given `region` in the given `garden`"
-  [garden region]
-  (let [plant (plant-at garden (first region))]
-    (->> region
-         (map (juxt identity touching-pos-with-dir-xs))
-         (map (fn [[reg-pos adjacents]]
-                (filter  (fn [adj]
-                           (complement (region (coords adj)))
-                           ) adjacents)
-                ))
-         )))
+  "Find and returns a set of fences for the given `region`"
+  [region]
+  (mapcat #(region-pos->fences region %) region))
+
+(defn group-by-side [axis-fn fences-by-axis]
+  (reduce (fn [acc fence]
+            (if (empty? acc)
+                ;; the first side
+              (conj acc [fence])
+                ;; is this fence consecutive to the last fence of the last side ?
+              (let [prev-fence (last (last acc))]
+                (if (= (inc (axis-fn prev-fence)) (axis-fn fence))
+                  ;; consecutive
+                  (-> acc
+                      butlast
+                      (conj (conj (last acc) fence)))
+                    ;; not consecutive : start new side
+                  (conj acc [fence])))))
+          []
+          (sort-by axis-fn fences-by-axis)))
+
+  ;; let's turn above form into a parametrized function
+(defn find-sides [region group-fn axis-fn]
+  (->> (find-fences region)
+       (group-by group-fn)
+       (map second)
+       ;; keep only fences having the same y-coord
+       (remove #(= 1 (count  %)))
+       ;; sides are fences with successive x-coord
+       (map #(group-by-side axis-fn %))
+       ;; aggregate sides parts with a length > 1 : they are sides
+       (reduce (fn [acc sides-parts]
+                 (->> sides-parts
+                      (remove #(= 1 (count %)))
+                      (into acc))) [])
+       (remove empty?)))
+
+    ;; and 2 helper functions
+(defn find-horizontal-sides [region]
+  (find-sides region y-coord x-coord))
+
+(defn find-vertical-sides [region]
+  (find-sides region x-coord y-coord))
+
+(defn fences-in-sides [horiz-sides vertical-sides]
+  (reduce into #{} (concat horiz-sides vertical-sides)))
+
+(defn describe-fences-and-sides [region]
+  (let [all-fences       (find-fences region)
+        horizontal-sides (find-horizontal-sides region)
+        vertical-sides   (find-vertical-sides region)
+        occupied-fences  (fences-in-sides horizontal-sides vertical-sides)]
+    {:all-fences all-fences
+     :h horizontal-sides
+     :v vertical-sides
+     :occ occupied-fences
+     :standalone-fences (remove occupied-fences all-fences)}))
+
+(defn compute-fence-side-price [region]
+  (let [{:keys [h v standalone-fences]} (describe-fences-and-sides region)]
+    (+ (count h)
+       (count v)
+       (count standalone-fences))))
+
+
+(defn solution-2 [input]
+  (->> (create-garden input)
+       find-all-regions
+       (map (juxt count compute-fence-side-price))
+       (map #(apply * %))
+       (reduce +)))
+
 
 (comment
+  (solution-2 sample-input-1)
+  ;; => ok
+  (solution-2 sample-input-2)
+  ;; => ok
 
-  (find-fences (create-garden sample-input-1)
-               #{[0 0] [1 0] [3 0] [2 0]})
-  (touching-pos-xs [0 1])
+  (solution-2 "EEEEE
+EXXXX
+EEEEE
+EXXXX
+EEEEE
+")
+  ;; => 236 .. ok
+
+  (solution-2 "AAAAAA
+AAABBA
+AAABBA
+ABBAAA
+ABBAAA
+AAAAAA
+")
+   ;; => 368 ok
+
+  (solution-2 sample-input-3)
+  ;; => 1263  not ok 😭 
+  ;; expected result is 1206 
+
+  ;; let's find out why this sample-input-3 does not returns the correct price
+
+  (let [garden (create-garden sample-input-3)]
+    (->> garden
+         find-all-regions
+        ;; decorate with plant
+         (map (juxt (comp (partial plant-at garden) first)
+                    #(assoc {} :region %)))
+         ;; add fences and sides info
+         (map (fn [[plant {:keys [region] :as info}]]
+                [plant (assoc info :fences (describe-fences-and-sides region))]))
+         (map (fn [[plant {:keys [fences region] :as info}]]
+                (let [count-region (count region)
+                      count-h-sides (count (:h fences))
+                      count-v-sides (count (:v fences))
+                      count-fences  (count (:standalone-fences fences))
+                      total-fence-price (+ count-h-sides count-v-sides count-fences)]
+                  (println (format "A region of %s plants with price %d * %d = %d" plant count-region total-fence-price (* count-region total-fence-price))))
+
+                [plant info]))
+         (into {})))
+
+;; => actual   : A region of V plants with price 13 * 11 = 143
+;; => expected : A region of V plants with price 13 * 20 = 260
+
+;; => actual   : A region of J plants with price 11 * 16 = 176
+;; => expected : A region of J plants with price 11 * 20 = 220
+
+  (def garden [[\R \R \R \R \I \I \C \C \F \F]
+               [\R \R \R \R \I \I \C \C \C \F]
+               [\V \V \R \R \R \C \C \F \F \F]
+               [\V \V \R \C \C \C \J \F \F \F]
+               [\V \V \V \V \C \J \J \C \F \E]
+               [\V \V \I \V \C \C \J \J \E \E]
+               [\V \V \I \I \I \C \J \J \E \E]
+               [\M \I \I \I \I \I \J \J \E \E]
+               [\M \I \I \I \S \I \J \E \E \E]
+               [\M \M \M \I \S \S \J \E \E \E]])
+
+  (print-garden (update-garden garden  #{[0 6] [0 5] [3 4] [1 4] [1 3] [1 5] [0 3] [2 4] [0 2] [0 4] [1 6] [1 2] [3 5]} \.))
+
+; RRRRIICCFF
+; --RRRIICCCF
+; ..|RRCCFFF
+; ..+-+CJFFF
+; ....|JJCFE
+; ..I.|CJJEE
+; ..IIICJJEE
+; --IIIIJJEE
+; MIIISIJEEE
+; MMMISSJEEE
+
+
+  
+  (def info_V {:region #{[0 6] [0 5] [3 4] [1 4] [1 3] [1 5] [0 3] [2 4] [0 2] [0 4] [1 6] [1 2] [3 5]},
+               :fences
+               {:all-fences
+                '([-0.25 6]
+                  [0 6.25]
+                  [-0.25 5]
+                  [3.25 4]
+                  [3 3.75]
+                  [1.25 3]
+                  [1.25 5]
+                  [-0.25 3]
+                  [2 3.75]
+                  [2 4.25]
+                  [-0.25 2]
+                  [0 1.75]
+                  [-0.25 4]
+                  [1.25 6]
+                  [1 6.25]
+                  [1.25 2]
+                  [1 1.75]
+                  [2.75 5]
+                  [3.25 5]
+                  [3 5.25]),
+                :h '([[0 6.25] [1 6.25]]
+                     [[0 1.75] [1 1.75]]
+                     [[2 3.75] [3 3.75]]),
+                :v '([[-0.25 2] [-0.25 3] [-0.25 4] [-0.25 5] [-0.25 6]]
+                     [[3.25 4] [3.25 5]]
+                     [[1.25 2] [1.25 3]]),
+                :occ
+                #{[-0.25 4]
+                  [2 3.75]
+                  [0 1.75]
+                  [1 6.25]
+                  [-0.25 2]
+                  [-0.25 6]
+                  [0 6.25]
+                  [3.25 4]
+                  [-0.25 3]
+                  [1.25 3]
+                  [3.25 5]
+                  [1.25 2]
+                  [1 1.75]
+                  [-0.25 5]
+                  [3 3.75]},
+                :standalone-fences '([1.25 5] [2 4.25] [1.25 6] [2.75 5] [3 5.25])}})
+
+  (print-garden (update-garden garden (:region info_V) \.))
+
+  (def info_J {:region #{[7 6] [7 7] [6 7] [5 4] [6 3] [6 6] [6 5] [6 4] [6 8] [6 9] [7 5]},
+               :fences
+               {:all-fences
+                '([7.25 6]
+                  [7.25 7]
+                  [7 7.25]
+                  [5.75 7]
+                  [4.75 4]
+                  [5 3.75]
+                  [5 4.25]
+                  [5.75 3]
+                  [6.25 3]
+                  [6 2.75]
+                  [5.75 6]
+                  [5.75 5]
+                  [6.25 4]
+                  [5.75 8]
+                  [6.25 8]
+                  [5.75 9]
+                  [6.25 9]
+                  [6 9.25]
+                  [7.25 5]
+                  [7 4.75]),
+                :h (),
+                :v '([[7.25 5] [7.25 6] [7.25 7]] [[5.75 5] [5.75 6]] [[6.25 3] [6.25 4]]),
+                :occ #{[7.25 7] [5.75 6] [6.25 3] [7.25 5] [5.75 5] [6.25 4] [7.25 6]},
+                :standalone-fences
+                '([7 7.25]
+                  [5.75 7]
+                  [4.75 4]
+                  [5 3.75]
+                  [5 4.25]
+                  [5.75 3]
+                  [6 2.75]
+                  [5.75 8]
+                  [6.25 8]
+                  [5.75 9]
+                  [6.25 9]
+                  [6 9.25]
+                  [7 4.75])}})
+  
+  (print-garden (update-garden garden (:region info_J) \.))
+  
+  ;; it seems that we dont find ALL sides
   ;;
   )
