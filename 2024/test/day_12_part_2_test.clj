@@ -15,6 +15,27 @@ EEEC
   )
 (def region-A-g1 #{[0 0] [1 0] [3 0] [2 0]})
 
+(deftest group-by-side-test
+  (testing "group by sides"
+    (is (= '([[1 22] [1 23]])
+           (d12p2/group-by-side d12p2/y-coord [[1 22] [1 23]]))
+        "2 consecutive fences is a side")
+
+    (is (= '([[1 24] [1 25]])
+           (d12p2/group-by-side d12p2/y-coord [[1 25] [1 24]]))
+        "2 consecutive fences in reverse order")
+    
+    (is (= '([[1 24] [1 25] [1 26] [1 27]])
+           (d12p2/group-by-side d12p2/y-coord [[1 25] [1 24] [1 27] [1 26]]))
+        "4 consecutive fences in reverse order")
+    
+    (is (= '([[1 2] [1 3] [1]])
+           (d12p2/group-by-side d12p2/y-coord [[1 3] [1 5] [1 6] [1 2]]))
+        "4 consecutive fences in reverse order")
+    ))
+
+
+
 (deftest find-fences
   (testing "simple sides"
     (is (= '([-0.25 0] [0.25 0] [0 -0.25] [0 0.25])
