@@ -194,7 +194,9 @@ MMMISSJEEE
                 (if (= (inc (axis-fn prev-fence)) (axis-fn fence))
                   ;; consecutive
                   (-> acc
-                      butlast
+                      ((comp (partial into []) butlast))
+                      #_butlast
+                      #_(into [])
                       (conj (conj (last acc) fence)))
                     ;; not consecutive : start new side
                   (conj acc [fence])))))
@@ -207,12 +209,12 @@ MMMISSJEEE
   (group-by-side y-coord  [[1.25 3] [1.25 5] [1.25 6] [1.25 2]])
   ;; return => ([[1.25 6]] [[1.25 5]] [[1.25 2] [1.25 3]])
   ;; but SHOULD return => ([[1.25 6] [1.25 5]] [[1.25 2] [1.25 3]])
+  
+  (def f (comp (partial into []) butlast) )
+  (f [1 2 3])
+  (group-by-side y-coord  [[88 3] [88 5] [88 6] [88 2]])
 
-  (group-by-side y-coord  (sort-by second [[1.25 3] [1.25 5] [1.25 6] [1.25 2]]))
-
-  (conj '(-1) 2)
-  (into [] (sort [1 3 6 4 2]))
-  (butlast [1 2 3])
+  
   ;;
   )
 
@@ -227,11 +229,11 @@ MMMISSJEEE
        ;; sides are fences with successive x-coord
        (map #(group-by-side axis-fn %))
        ;; aggregate sides parts with a length > 1 : they are sides
-       #_(reduce (fn [acc sides-parts]
+       (reduce (fn [acc sides-parts]
                  (->> sides-parts
                       (remove #(= 1 (count %)))
                       (into acc))) [])
-       #_(remove empty?)))
+       (remove empty?)))
 
     ;; and 2 helper functions
 (defn find-horizontal-sides [region]
@@ -278,9 +280,9 @@ MMMISSJEEE
 
 (comment
   (solution-2 sample-input-1)
-  ;; => ok
+  ;; => 80 ... ok
   (solution-2 sample-input-2)
-  ;; => ok
+  ;; => 436 ... ok
 
   (solution-2 "EEEEE
 EXXXX
@@ -303,6 +305,7 @@ AAAAAA
   ;; => 1263  not ok 😭 
   ;; expected result is 1206 
 
+ 
   ;; let's find out why this sample-input-3 does not returns the correct price
 
   (def detail-results  (let [garden (create-garden sample-input-3)]
@@ -361,4 +364,17 @@ AAAAAA
 
 (find-vertical-sides #{[0 6] [0 5] [3 4] [1 4] [1 3] [1 5] [0 3] [2 4] [0 2] [0 4] [1 6] [1 2] [3 5]})
 
+  )
+
+(comment
+  
+  ;; after having fix the issue in group-by-side function ...
+   (solution-2 puzzle-input)
+    ;; => 869070 ⭐ 
+  
+  ;; yes !!!
+  ;; the error came from the fact that butlast returns a list, when I assumed
+  ;; the function would be dealing with vectors only. In particular, using
+  ;; 'conj' on a vector and on a list does not give the same result !!!
+  ;; 
   )

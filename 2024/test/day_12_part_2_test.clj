@@ -24,15 +24,15 @@ EEEC
     (is (= '([[1 24] [1 25]])
            (d12p2/group-by-side d12p2/y-coord [[1 25] [1 24]]))
         "2 consecutive fences in reverse order")
-    
+
     (is (= '([[1 24] [1 25] [1 26] [1 27]])
            (d12p2/group-by-side d12p2/y-coord [[1 25] [1 24] [1 27] [1 26]]))
         "4 consecutive fences in reverse order")
-    
-    (is (= '([[1 2] [1 3] [1]])
+
+    (is (= [[[1 2] [1 3]]
+            [[1 5] [1 6]]]
            (d12p2/group-by-side d12p2/y-coord [[1 3] [1 5] [1 6] [1 2]]))
-        "4 consecutive fences in reverse order")
-    ))
+        "4 consecutive fences in reverse order")))
 
 
 
