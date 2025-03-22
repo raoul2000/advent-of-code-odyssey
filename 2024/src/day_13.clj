@@ -80,48 +80,8 @@ Prize: X=18641, Y=10279
   (re-matches #"Button A: X\+(\d+), Y\+(\d+)\nButton B: X\+(\d+), Y\+(\d+)\nPrize: X=(\d+), Y=(\d+)" "Button A: X+94, Y+34
 Button B: X+22, Y+67
 Prize: X=18641, Y=10279")
-  (let [[dxa dya dxb dyb px py] (->> (rest ["Button A: X+94, Y+34\nButton B: X+22, Y+67\nPrize: X=18641, Y=10279" "94" "34" "22" "67" "18641" "10279"])
-                                     (map edn/read-string))]
-    {:button-A {:dx dxa  :dy dya}
-     :button-b {:dx dxb  :dy dyb}
-     :prize    {:x px :y py}})
 
-  (->>  (s/split puzzle-input #"\n\n")
-        (map (fn [line]
-               (let [[dx-a dy-a dx-b dy-b prize-x prize-y] (->> line
-                                                                (re-matches #"Button A: X\+(\d+), Y\+(\d+)\nButton B: X\+(\d+), Y\+(\d+)\nPrize: X=(\d+), Y=(\d+)")
-                                                                (rest)
-                                                                (map edn/read-string))
-                     num-push-y        (- (* dx-a prize-y) (* dy-a prize-x))
-                     denum-pushy       (- (* dy-b dx-a)    (* dx-b dy-a))
-                     push-y            (when (zero? (rem num-push-y denum-pushy))
-                                         (quot num-push-y denum-pushy))
-
-                     push-x            (when push-y
-                                         (let [num-push-x        (- prize-x (* push-y dx-b))
-                                               denum-push-x      dx-a]
-                                           (when (zero? (rem num-push-x denum-push-x))
-                                             (quot num-push-x denum-push-x))))
-                     cost  (when (and push-y push-x)
-                             (+ (* 3 push-x) push-y))]
-
-                 {:button-A {:dx dx-a  :dy dy-a}
-                  :button-b {:dx dx-b  :dy dy-b}
-                  :prize    {:x prize-x :y prize-y}
-                  :push-y   push-y
-                  :push-x   push-x
-                  :cost     cost})))
-        (remove #(or (nil? (:push-x %))
-                     (nil? (:push-x %))))
-        #_(filter #(and (:push-x %) (:push-y %)))
-
-        #_(filter #(and (>= 100 (:push-x %))
-                        (>= 100 (:push-y %))))
-        #_(map :cost)
-
-        #_(reduce +))
-
-        ;;
+  ;;
   )
 
 (defn parse-machine-line
@@ -203,7 +163,65 @@ Prize: X=18641, Y=10279")
   (solution-1 puzzle-input)
   ;; => 26599 ⭐
 
-  
+  ;;
+  )
+
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; add 10000000000000 to all prize-x and prize-y
+;; do not limit to 100 push
+
+
+(defn lines->machine2
+  "Given 3 lines representing a machine, returns a map describing the machine.
+   
+   Example input : 
+   ```
+   Button A: X+94, Y+34
+   Button B: X+22, Y+67
+   Prize: X=8400, Y=5400
+   ```
+   "
+  [line]
+  (let [[dx-a dy-a dx-b dy-b prz-x prz-y] (parse-machine-line line)
+        prize-x   (+ prz-x 10000000000000N)
+        prize-y   (+ prz-y 10000000000000N)
+        num-push-y        (- (* dx-a prize-y) (* dy-a prize-x))
+        denum-pushy       (- (* dy-b dx-a)    (* dx-b dy-a))
+        push-y            (when (zero? (rem num-push-y denum-pushy))
+                            (quot num-push-y denum-pushy))
+
+        push-x            (when push-y
+                            (let [num-push-x   (- prize-x (* push-y dx-b))
+                                  denum-push-x  dx-a]
+                              (when (zero? (rem num-push-x denum-push-x))
+                                (quot num-push-x denum-push-x))))
+        cost              (when (and push-y push-x)
+                            (+ (* 3 push-x) push-y))]
+
+    {:button-A {:dx dx-a   :dy dy-a}
+     :button-b {:dx dx-b   :dy dy-b}
+     :prize    {:x prize-x :y prize-y}
+     :push-y   push-y
+     :push-x   push-x
+     :cost     cost}))
+
+(defn solution-2 [s]
+  (->> (s/split s #"\n\n")
+       (map lines->machine2)
+       ;; ignore machines with no way to reach prize
+       (filter #(and (:push-x %) (:push-y %)))
+
+
+       ;; get cost
+       (map :cost)
+
+       ;; total cost
+       (reduce +)))
+
+(comment
+
+  (solution-2 puzzle-input)
+  ;; => 106228669504887 yes !!⭐
   ;;
   )
 
