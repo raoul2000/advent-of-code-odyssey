@@ -52,17 +52,41 @@ p=9,5 v=-3,-3
        (map #(vector %1 %2) [:px :py :vx :vy])
        (into {})))
 
-(defn parse 
+(defn parse
   "Returns a seq of maps where each map describes a robot"
   [input]
   (->> input
        str/split-lines
        (map parse-robot-line)))
 
+
 (comment
-  
+
   (parse sample-input)
   (parse puzzle-input)
 
+  ;;
+  )
+
+;; moving a robot on the x-axis for sec-count sec, given col-count
+;; max-x = (dec col-count) 
+;; 
+
+(defn move-x [{:keys [px vx] :as _robot} col-count sec-count]
+  (let [max-x (dec col-count)
+        dx    (+ px (* sec-count vx))]
+    (cond
+      (< -1 dx col-count) dx
+      (> dx max-x)        (mod dx col-count)
+      :else :boo)))
+
+
+(comment
+
+
+  (move-x {:px 0 :vx 5} 6 1)
+  (move-x {:px 0 :vx 6} 6 1)
+  (dec (mod 8 6))
+  (mod 14 6)
   ;;
   )
