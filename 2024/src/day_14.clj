@@ -72,7 +72,7 @@ p=9,5 v=-3,-3
 ;; max-x = (dec col-count) 
 ;; 
 
-(defn move-x [{:keys [px vx] :as _robot} col-count sec-count]
+(defn move [{:keys [px vx] :as _robot} col-count sec-count]
   (let [max-x (dec col-count)
         dx    (+ px (* sec-count vx))]
     (cond
@@ -80,13 +80,85 @@ p=9,5 v=-3,-3
       (> dx max-x)        (mod dx col-count)
       :else :boo)))
 
-
 (comment
-
-
-  (move-x {:px 0 :vx 5} 6 1)
-  (move-x {:px 0 :vx 6} 6 1)
-  (dec (mod 8 6))
-  (mod 14 6)
+  (move {:px 0 :vx 10} 6 2)
+  (move {:px 0 :vx 6} 6 1)
   ;;
   )
+
+(comment
+  ;; dealing with negative velocity
+  (def r1 {:px 2 :vx -3})
+  (def max-x 5)
+
+  ;; interpolate coordinates ot get a positive velocity
+  ;; For X axis, left->right is replaced by right->left
+  (def r1-i (if (neg-int? (:vx r1))
+              (-> r1
+                  (update :vx abs)
+                  (update :px #(- max-x %)))
+              r1))
+
+  (def result-i (move-x r1-i (inc max-x) 1))
+  (def result (- max-x result-i))
+
+
+  ;;
+  )
+
+(defn move-x [{:keys [px vx] :as robot} col-count sec-count]
+  (let [r (if (neg? vx)
+            {:vx (abs vx), :px (- (dec col-count) px)}
+            robot)
+        new-pos (move r col-count sec-count)]
+    (if (neg? vx)
+      (- (dec col-count) new-pos)
+      new-pos)))
+
+(comment
+  (move-x {:px 1, :vx -3} 6 1))
+
+(defn apply-positive-velocity
+  "Compute the new coordinate given a **positive velocity** value."
+  [coord positive-velocity axis-size sec-count]
+  (let [max-coord   (dec axis-size)
+        new-coord   (+ coord (* sec-count positive-velocity))]
+    (cond
+      (< -1 new-coord axis-size)  new-coord
+      (> new-coord max-coord)    (mod new-coord axis-size))))
+
+(comment
+  (apply-positive-velocity 0 1 2 1)
+  (apply-positive-velocity 0 1 2 2)
+  (neg? 0)
+  ;;
+  )
+
+(defn move-on-axis [coord v axis-size sec-count]
+  (let [interpol-coord (cond->> coord
+                         (neg? v) (- (dec axis-size)))
+        new-coord      (apply-positive-velocity  interpol-coord
+                                                 (abs v)
+                                                 axis-size
+                                                 sec-count)]
+    (cond->> new-coord
+      (neg? v)  (- (dec axis-size)))))
+
+(comment
+  (move-on-axis  0 1 2 2)
+  (move-on-axis  0 1 6 1)
+
+  (cond-> -1
+    (neg? 1) abs)
+  ;;
+  )
+
+
+
+
+
+
+#_(defn move-robot [robot col-count row-count sec-count]
+    (-> robot
+        (move-on-single-axis col-count sec-count)
+        (move-on-single-axis row-count sec-count)))
