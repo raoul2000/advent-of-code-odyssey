@@ -4,34 +4,6 @@
             [day-14 :as d14]))
 
 
-(deftest move-x-test
-  (testing "Moving robot on the x axis"
-    (is (= 2
-           (d14/move-x {:px 0 :vx 2} 6 1)))
-    (is (= 4
-           (d14/move-x {:px 0 :vx 2} 6 2)))
-    (is (= 0
-           (d14/move-x {:px 0 :vx 2} 6 3)))
-    (is (= 5
-           (d14/move-x {:px 0 :vx 5} 6 1)))
-    (is (= 4
-           (d14/move-x {:px 0 :vx 5} 6 2)))
-    (is (= 3
-           (d14/move-x {:px 0 :vx 5} 6 3)))
-
-    ;; negative velocity
-    (is (= 4
-           (d14/move-x {:px 0 :vx -2} 6 1)))
-    (is (= 2
-           (d14/move-x {:px 0 :vx -2} 6 2)))
-    (is (= 0
-           (d14/move-x {:px 0 :vx -2} 6 3)))
-    (is (= 4
-           (d14/move-x {:px 0 :vx -2} 6 4)))
-
-    (is (= 4
-           (d14/move-x {:px 2 :vx -10} 6 1)))))
-
 (deftest move-on-axis-test
   (testing "move robot on single axis"
     (are [result arg-map] (= result (d14/move-on-axis (:coord arg-map) (:v arg-map) (:axis-size arg-map) (:sec-count arg-map)))

@@ -100,7 +100,8 @@ p=9,5 v=-3,-3
 
 
 (defn apply-positive-velocity
-  "Compute the new coordinate given a **positive velocity** value."
+  "Compute and returns the new coordinate on a single axis given a **positive velocity** value after 
+   a given number of seconds."
   [coord positive-velocity axis-size sec-count]
   (let [max-coord   (dec axis-size)
         new-coord   (+ coord (* sec-count positive-velocity))]
@@ -114,10 +115,15 @@ p=9,5 v=-3,-3
   ;;
   )
 
-(defn move-on-axis [coord velocity axis-size sec-count]
+(defn move-on-axis 
+  "Compute and returns the new coordinate on a single axis given a **velocity**, after a given amout of seconds.
+   
+   Note that the *velocity* can be positive or negative integer.
+   "
+  [coord velocity axis-size sec-count]
   (let [interpol-coord (cond->> coord
                          (neg? velocity)   (- (dec axis-size)))
-        
+
         new-coord      (apply-positive-velocity  interpol-coord
                                                  (abs velocity)
                                                  axis-size
@@ -131,7 +137,10 @@ p=9,5 v=-3,-3
   ;;
   )
 
-(defn move-robot [{:keys [vx vy] :as robot} col-count row-count sec-count]
+(defn move-robot 
+  "Given a map describing a single robot, returns a new map with coordinates updated by aplying the move
+   of given velocities during the given amount of seconds."
+  [{:keys [vx vy] :as robot} col-count row-count sec-count]
   (-> robot
       (update :px #(move-on-axis % vx col-count sec-count))
       (update :py #(move-on-axis % vy row-count sec-count))))
@@ -140,7 +149,10 @@ p=9,5 v=-3,-3
 ;; - create a grid
 ;; - place robots on the grid
 
-(defn create-grid [col-count row-count]
+(defn create-grid 
+  "Helper function to create a grid given its dimensions. Each grid pos
+   is filled with character '.'."
+  [col-count row-count]
   (vec (repeat row-count (vec (repeat col-count ".")))))
 
 
@@ -153,7 +165,6 @@ p=9,5 v=-3,-3
   (print (s/join "\n" (grid->str grid))))
 
 (defn set-at-pos [grid x y]
-  (tap> x)
   (update-in grid [y x] #(if (= % ".") 1 (inc %))))
 
 (comment
@@ -207,6 +218,7 @@ p=9,5 v=-3,-3
 
   ;;
   )
+
 (defn q1? [{:keys [x-fronter y-fronter]} {:keys [px py]}]
   (and (< -1 px x-fronter)
        (< -1 py y-fronter)))
@@ -223,9 +235,49 @@ p=9,5 v=-3,-3
   (and (< x-fronter px col-count)
        (< y-fronter py row-count)))
 
-(defn grid-spec [col-count row-count]
+(defn grid-spec 
+  "Given a map describing a grid, returns a new map with 2 new keys : 
+   
+   - `x-fronter` : value of the X axis representing the vertical quadrant fronter
+   - `y-fronter` : value of the Y axis representing the horizontal quadrant fronter
+   
+   "
+  [col-count row-count]
   {:x-fronter (quot col-count 2)
    :y-fronter (quot row-count 2)
    :col-count col-count
    :row-count row-count})
+
+;; Now given a x y pos, assign a quadrant
+
+(defn assign-by-quadrant 
+  "Given a map deszcribing a robot, returns a new map with extra key `:quadrant` added. Its value
+   is the quadrant id where this robot is located."
+  [robot grid-spec]
+  (cond-> robot
+    (q1? grid-spec robot) (assoc :quadrant 1)
+    (q2? grid-spec robot) (assoc :quadrant 2)
+    (q3? grid-spec robot) (assoc :quadrant 3)
+    (q4? grid-spec robot) (assoc :quadrant 4)))
+
+
+(defn solution-1 [s col-count row-count sec-count]
+  (let [grid-specif (grid-spec col-count row-count)]
+    (->> s
+         parse
+         (map #(move-robot % col-count row-count sec-count))
+         (map #(assign-by-quadrant % grid-specif))
+         (filter :quadrant)
+         (group-by :quadrant)
+         (map #(count (second %)))
+         (reduce *)
+         )))
+
+(comment
+  (solution-1 sample-input 11 7 100)
+  ;; => 12 ... good
+  (solution-1 puzzle-input 101 103 100)
+  ;; => ⭐
+  ;;
+  )
 
