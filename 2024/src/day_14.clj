@@ -1,6 +1,7 @@
 (ns day-14
   (:require [clojure.string :as s]
             [clojure.edn :as edn]
+            [clojure.math :as math]
             [clojure.string :as str]))
 
 ;; https://adventofcode.com/2024/day/14
@@ -59,39 +60,34 @@ p=9,5 v=-3,-3
        str/split-lines
        (map parse-robot-line)))
 
-
 (comment
-
   (parse sample-input)
   (parse puzzle-input)
-
   ;;
   )
 
+
+(comment
 ;; moving a robot on the x-axis for sec-count sec, given col-count
 ;; max-x = (dec col-count) 
 ;; 
 
-(defn move [{:keys [px vx] :as _robot} col-count sec-count]
-  (let [max-x (dec col-count)
-        dx    (+ px (* sec-count vx))]
-    (cond
-      (< -1 dx col-count) dx
-      (> dx max-x)        (mod dx col-count)
-      :else :boo)))
+  (defn move [{:keys [px vx] :as _robot} col-count sec-count]
+    (let [max-x (dec col-count)
+          dx    (+ px (* sec-count vx))]
+      (cond
+        (< -1 dx col-count) dx
+        (> dx max-x)        (mod dx col-count)
+        :else :boo)))
 
-(comment
   (move {:px 0 :vx 10} 6 2)
   (move {:px 0 :vx 6} 6 1)
-  ;;
-  )
 
-(comment
   ;; dealing with negative velocity
   (def r1 {:px 2 :vx -3})
   (def max-x 5)
 
-  ;; interpolate coordinates ot get a positive velocity
+  ;; interpolate coordinates to get a positive velocity
   ;; For X axis, left->right is replaced by right->left
   (def r1-i (if (neg-int? (:vx r1))
               (-> r1
@@ -99,24 +95,9 @@ p=9,5 v=-3,-3
                   (update :px #(- max-x %)))
               r1))
 
-  (def result-i (move-x r1-i (inc max-x) 1))
-  (def result (- max-x result-i))
-
-
   ;;
   )
 
-(defn move-x [{:keys [px vx] :as robot} col-count sec-count]
-  (let [r (if (neg? vx)
-            {:vx (abs vx), :px (- (dec col-count) px)}
-            robot)
-        new-pos (move r col-count sec-count)]
-    (if (neg? vx)
-      (- (dec col-count) new-pos)
-      new-pos)))
-
-(comment
-  (move-x {:px 1, :vx -3} 6 1))
 
 (defn apply-positive-velocity
   "Compute the new coordinate given a **positive velocity** value."
@@ -130,35 +111,121 @@ p=9,5 v=-3,-3
 (comment
   (apply-positive-velocity 0 1 2 1)
   (apply-positive-velocity 0 1 2 2)
-  (neg? 0)
   ;;
   )
 
-(defn move-on-axis [coord v axis-size sec-count]
+(defn move-on-axis [coord velocity axis-size sec-count]
   (let [interpol-coord (cond->> coord
-                         (neg? v) (- (dec axis-size)))
+                         (neg? velocity)   (- (dec axis-size)))
+        
         new-coord      (apply-positive-velocity  interpol-coord
-                                                 (abs v)
+                                                 (abs velocity)
                                                  axis-size
                                                  sec-count)]
     (cond->> new-coord
-      (neg? v)  (- (dec axis-size)))))
+      (neg? velocity)  (- (dec axis-size)))))
 
 (comment
   (move-on-axis  0 1 2 2)
   (move-on-axis  0 1 6 1)
-
-  (cond-> -1
-    (neg? 1) abs)
   ;;
   )
 
+(defn move-robot [{:keys [vx vy] :as robot} col-count row-count sec-count]
+  (-> robot
+      (update :px #(move-on-axis % vx col-count sec-count))
+      (update :py #(move-on-axis % vy row-count sec-count))))
+
+;; in order to verify with the provided example, let's play with grid
+;; - create a grid
+;; - place robots on the grid
+
+(defn create-grid [col-count row-count]
+  (vec (repeat row-count (vec (repeat col-count ".")))))
 
 
+(defn grid->str [grid]
+  (->> (map (fn [line]
+              (map str line)) grid)
+       (map #(apply str %))))
 
+(defn print-grid [grid]
+  (print (s/join "\n" (grid->str grid))))
 
+(defn set-at-pos [grid x y]
+  (tap> x)
+  (update-in grid [y x] #(if (= % ".") 1 (inc %))))
 
-#_(defn move-robot [robot col-count row-count sec-count]
-    (-> robot
-        (move-on-single-axis col-count sec-count)
-        (move-on-single-axis row-count sec-count)))
+(comment
+  (def grid (create-grid 11 7))
+  (print-grid (set-at-pos grid 0 0))
+  (print-grid (set-at-pos grid 1 1))
+  (print-grid (set-at-pos (set-at-pos grid 1 1) 1 1))
+
+  ;;
+  )
+
+(defn place-robot [grid {:keys [px py] :as _robot}]
+  (set-at-pos grid px py))
+
+(comment
+  (def col-count 11)
+  (def row-count 7)
+  (def grid (create-grid col-count row-count))
+  (update-in grid [0 9] (constantly "X"))
+
+  (def final-grid (->> sample-input
+                       parse
+                       (map (fn [robot]
+                              (move-robot robot col-count row-count 100)))
+                       (reduce (fn [grid robot]
+                                 (place-robot grid robot)) grid)))
+
+  (print-grid final-grid)
+  (def expected-result "......2..1.
+...........
+1..........
+.11........
+.....1.....
+...12......
+.1....1....
+")
+  ;; seems to be ok !! 👍
+  ;; now we must split the grid into 4 quadrants
+  ;; Before placing robots inside the grid, we will sort them by quadront
+  ;; removing all robots located on quadront fronter
+
+  ;; Given col-count and row-count
+  (int (math/ceil (/ 103 2)))
+  (int (math/ceil (/ 101 2)))
+
+  (def x-fronter (int (math/ceil (/ col-count 2))))
+  (def y-fronter (int (math/ceil (/ row-count 2))))
+
+  ;; up-left : -1 < x < col-count / 2
+  ;;     and : -1 < y < row-count / 2
+
+  ;;
+  )
+(defn q1? [{:keys [x-fronter y-fronter]} {:keys [px py]}]
+  (and (< -1 px x-fronter)
+       (< -1 py y-fronter)))
+
+(defn q2? [{:keys [x-fronter y-fronter col-count]} {:keys [px py]}]
+  (and (< x-fronter px col-count)
+       (< -1 py y-fronter)))
+
+(defn q3? [{:keys [x-fronter y-fronter  row-count]} {:keys [px py]}]
+  (and (< -1 px x-fronter)
+       (< y-fronter py row-count)))
+
+(defn q4? [{:keys [x-fronter y-fronter  col-count row-count]} {:keys [px py]}]
+  (and (< x-fronter px col-count)
+       (< y-fronter py row-count)))
+
+(defn grid-spec [col-count row-count]
+  {:x-fronter (quot col-count 2)
+   :y-fronter (quot row-count 2)
+   :col-count col-count
+   :row-count row-count})
+
