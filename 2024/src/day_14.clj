@@ -115,7 +115,7 @@ p=9,5 v=-3,-3
   ;;
   )
 
-(defn move-on-axis 
+(defn move-on-axis
   "Compute and returns the new coordinate on a single axis given a **velocity**, after a given amout of seconds.
    
    Note that the *velocity* can be positive or negative integer.
@@ -137,7 +137,7 @@ p=9,5 v=-3,-3
   ;;
   )
 
-(defn move-robot 
+(defn move-robot
   "Given a map describing a single robot, returns a new map with coordinates updated by aplying the move
    of given velocities during the given amount of seconds."
   [{:keys [vx vy] :as robot} col-count row-count sec-count]
@@ -149,7 +149,7 @@ p=9,5 v=-3,-3
 ;; - create a grid
 ;; - place robots on the grid
 
-(defn create-grid 
+(defn create-grid
   "Helper function to create a grid given its dimensions. Each grid pos
    is filled with character '.'."
   [col-count row-count]
@@ -235,7 +235,7 @@ p=9,5 v=-3,-3
   (and (< x-fronter px col-count)
        (< y-fronter py row-count)))
 
-(defn grid-spec 
+(defn grid-spec
   "Given a map describing a grid, returns a new map with 2 new keys : 
    
    - `x-fronter` : value of the X axis representing the vertical quadrant fronter
@@ -250,7 +250,7 @@ p=9,5 v=-3,-3
 
 ;; Now given a x y pos, assign a quadrant
 
-(defn assign-by-quadrant 
+(defn assign-by-quadrant
   "Given a map deszcribing a robot, returns a new map with extra key `:quadrant` added. Its value
    is the quadrant id where this robot is located."
   [robot grid-spec]
@@ -270,14 +270,71 @@ p=9,5 v=-3,-3
          (filter :quadrant)
          (group-by :quadrant)
          (map #(count (second %)))
-         (reduce *)
-         )))
+         (reduce *))))
 
 (comment
   (solution-1 sample-input 11 7 100)
   ;; => 12 ... good
   (solution-1 puzzle-input 101 103 100)
-  ;; => ⭐
+  ;; =>  224554908 ⭐
   ;;
   )
 
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; at a certain step (after a certain amount of seconds) a Christmas tree is drawn
+;; by robots !! 😮
+
+;; what ? 
+
+;; What does a christmas tree look like ? 
+
+;; ....X....
+;; ...XXX...
+;; ..XXXXX..
+;; .XXXXXXX.
+;; ....X....
+;; ....X....
+
+;; something like that ? 
+;; Let's assule that if a christams tree is drawn in the grid then we ashould have
+;; 'several' robots aligned. It can be veritcally (the trunc) or horizontaly (the wideest side)
+;; 
+;; We could then, after each move (each second) detect if such case occured
+;; This is VERY fuzzy ... but maybe it will work.
+
+;; One potential issue is time processing. With a 103x107 grid it may take a while
+
+;; Given a seq of robots, find consecutive robots
+
+(comment
+
+  ;; move once
+  (defn move-one-sec [robots]
+    (map #(move-robot % 11 7 1) robots))
+
+  (last (take 2000 (iterate move-one-sec (parse sample-input))))
+  ;; stack overflow
+
+  
+  (loop [robots (parse sample-input)
+         sec   0]
+    (if (= 4000 sec)
+      robots
+      (recur (move-one-sec robots) (inc sec))))
+  ;; stack overflow
+
+  (reduce (fn [robots sec]
+            (move-one-sec robots))
+          (parse sample-input) 
+          (take 5000 (iterate inc 0 )))
+  ;; stack overflow
+  ;; 😭
+
+
+
+
+
+  (parse sample-input)
+
+  ;;
+  )
