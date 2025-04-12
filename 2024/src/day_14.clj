@@ -251,7 +251,7 @@ p=9,5 v=-3,-3
 ;; Now given a x y pos, assign a quadrant
 
 (defn assign-by-quadrant
-  "Given a map deszcribing a robot, returns a new map with extra key `:quadrant` added. Its value
+  "Given a map describing a robot, returns a new map with extra key `:quadrant` added. Its value
    is the quadrant id where this robot is located."
   [robot grid-spec]
   (cond-> robot
@@ -296,8 +296,8 @@ p=9,5 v=-3,-3
 ;; ....X....
 
 ;; something like that ? 
-;; Let's assule that if a christams tree is drawn in the grid then we ashould have
-;; 'several' robots aligned. It can be veritcally (the trunc) or horizontaly (the wideest side)
+;; Let's assume that if a christams tree is drawn in the grid then we should have
+;; 'several' robots aligned. It can be veritcally (the trunc) or horizontaly (the widest side)
 ;; 
 ;; We could then, after each move (each second) detect if such case occured
 ;; This is VERY fuzzy ... but maybe it will work.
@@ -315,7 +315,7 @@ p=9,5 v=-3,-3
   (last (take 2000 (iterate move-one-sec (parse sample-input))))
   ;; stack overflow
 
-  
+
   (loop [robots (parse sample-input)
          sec   0]
     (if (= 4000 sec)
@@ -325,16 +325,48 @@ p=9,5 v=-3,-3
 
   (reduce (fn [robots sec]
             (move-one-sec robots))
-          (parse sample-input) 
-          (take 5000 (iterate inc 0 )))
+          (parse sample-input)
+          (take 5000 (iterate inc 0)))
   ;; stack overflow
   ;; 😭
 
 
+  ;; ok so maybe we will find a christmas tree before reaching the stack overflow error ...
+  )
 
+(comment
+  ;; how to detect robot aligned given a seq of their positions ?
+  ;; They are aligned horizontally if 
+  ;; - they all have the same py
+  ;; - they have consecutive px
 
+  (defn sort-by-axis [axis-key robots]
+    (sort-by axis-key robots))
 
-  (parse sample-input)
+  (sort-by-axis :px [{:px 2} {:px 4} {:px 1}])
+
+  (defn max-consecutive-by-axis [axis-key robots]
+    (reduce (fn [acc robot]
+              (if (empty? acc)
+                (conj acc robot)
+                (if (= (-> acc last axis-key inc) (axis-key robot))
+                  (conj acc robot)
+                  (vector robot)))) [] robots))
+  
+  (max-consecutive-by-axis :px [{:px 2} {:px 3} {:px 4}])
+
+  ;; using partition-by
+  (map list [2 3 4] [1 2 3 4])
+  (->> (map #(- %1 %2) [2 3 4] [1 2 3 4] )
+       (partition-by (partial reduce -)))
+
+  (reduce - [1 2 ])
+  (list 1 2)
+  (vector 2)
+  (first [])
+  (rest [])
+  (get nil :p)
+
 
   ;;
   )
