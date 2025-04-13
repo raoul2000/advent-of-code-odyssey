@@ -90,18 +90,19 @@
     ))
 
 ((deftest count-consecutive-by-axis-test
-      (testing "Count consecutive robots on given axis"
-        (is (=  3
-             (d14/count-consecutive-by-axis :px [{:px 2} {:px 3} {:px 4}] )))
-        
-        (is (=  3
-                (d14/count-consecutive-by-axis :px [{:px 2} {:px 4} {:px 3}])))
-        
-        (is (=  3
-                (d14/count-consecutive-by-axis :px [{:px 2} {:px 4} {:px 30} {:px 11} {:px 13}])))
+   (testing "Count consecutive robots on given axis"
+     (is (=  3
+             (d14/count-consecutive-by-axis :px [{:px 2} {:px 3} {:px 4}])))
 
-        
-        )) )
+     (is (=  3
+             (d14/count-consecutive-by-axis :px [{:px 2} {:px 4} {:px 3}])))
+
+     (is (=  0
+             (d14/count-consecutive-by-axis :px [{:px 2} {:px 4} {:px 30} {:px 11} {:px 13}])))
+     
+     (is (=  2
+             (d14/count-consecutive-by-axis :px [{:px 3} {:px 40} {:px 30} {:px 4} {:px 31}])))
+     )))
 
 
 (deftest partition-by-consecutive-test

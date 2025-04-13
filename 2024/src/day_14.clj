@@ -360,29 +360,33 @@ p=9,5 v=-3,-3
   (->> (map #(- %1 %2) [2 3 4] [1 2 3 4])
        (partition-by identity))
 
-  (reduce - [1 2])
-  (list 1 2)
-  (vector 2)
-  (first [])
-  (rest [])
-  (get nil :p)
-
 
   ;;
   )
 
-(defn count-consecutive-by-axis [axis-k robots]
-  (->> robots
-       (sort-by axis-k)
-       (map :px)
-       ((juxt  next identity))
-       (apply map -)
-       (partition-by identity)
-       (filter #(= 1 (first %)))
-       (map count)
-       #_(apply max)
-       #_inc
-       ))
+(defn count-consecutive-by-axis
+  "Given a seq od robots, returns the max count of consecutive robots on the given `axis-k` where
+   `axis-k` is ont of :
+   
+   - `:px` : for horizontal axis
+   - `:py` : for veritcal axis
+
+   Note that `robots` must be have the same (complement `axis-k`) value.
+   "
+  [axis-k robots]
+  (let [count-consec (->> robots
+                          (sort-by axis-k)
+                          (map :px)
+                          ((juxt  next identity))
+                          (apply map -)
+                          (partition-by identity)
+                          (filter #(= 1 (first %)))
+                          (map count))]
+    (if (seq count-consec)
+      (->> count-consec
+           (apply max)
+           inc)
+      0)))
 
 (comment
 
@@ -391,11 +395,39 @@ p=9,5 v=-3,-3
 
   (count-consecutive-by-axis :px [{:px 2} {:px 4} {:px 30} {:px 33} {:px 36}])
   (apply max '())
-
-
-  
   ;;
   )
 
-(defn partition-by-consecutive [axis-k robots]
-  (sort-by axis-k robots))
+(defn count-max-horizontal
+  "Given a seq of `robots`, returns the max number of horizontally aligned robots."
+  [robots]
+  (->> robots
+       (group-by :py)
+       (map (fn [[_py y-robots]]
+              (count-consecutive-by-axis :px y-robots)))
+       (apply max)))
+
+(comment
+  (count-max-horizontal [{:px 2 :py 1} {:px 4 :py 1} {:px 30 :py 3} {:px 33 :py 3} {:px 36 :py 3}])
+  (count-max-horizontal [{:px 2 :py 1} {:px 3 :py 2} {:px 30 :py 3} {:px 33 :py 3} {:px 36 :py 3}])
+  ;;
+  )
+
+(comment
+  (defn move-one-sec [robots]
+    (map #(move-robot % 103 101 1) robots)
+    #_(map #(move-robot % 11 7 1) robots))
+
+  (last (take 2000 (iterate move-one-sec (parse puzzle-input))))
+
+  (->> (parse puzzle-input)
+       (iterate move-one-sec)
+       (map count-max-horizontal)
+       (take 10000)
+       (apply max))
+  ;;=> 5
+
+
+
+  ;;
+  )
