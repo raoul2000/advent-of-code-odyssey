@@ -87,4 +87,38 @@
       true     {:q d14/q4? :px 6  :py 4}
       true     {:q d14/q4? :px 10 :py 6})
     ;;
-    )) 
+    ))
+
+((deftest count-consecutive-by-axis-test
+      (testing "Count consecutive robots on given axis"
+        (is (=  3
+             (d14/count-consecutive-by-axis :px [{:px 2} {:px 3} {:px 4}] )))
+        
+        (is (=  3
+                (d14/count-consecutive-by-axis :px [{:px 2} {:px 4} {:px 3}])))
+        
+        (is (=  3
+                (d14/count-consecutive-by-axis :px [{:px 2} {:px 4} {:px 30} {:px 11} {:px 13}])))
+
+        
+        )) )
+
+
+(deftest partition-by-consecutive-test
+  (testing "partition by consecutive pos on given axis"
+    (is (= '()
+           (d14/partition-by-consecutive :px []))
+        "returns empty seq when empty seq is given")
+
+    (is (= '({:px 2}, {:px 3}, {:px 4})
+           (d14/partition-by-consecutive :px [{:px 2}, {:px 3}, {:px 4}]))
+        "returns same as given when given is consecutive")
+
+    (is (= '({:px 2}, {:px 3}, {:px 4})
+           (d14/partition-by-consecutive :px [{:px 4}, {:px 3}, {:px 2}]))
+        "when given is not sorted consecutive")
+
+    (is (= '(({:px 1} {:px 2}, {:px 3})
+             ({:px 5}))
+           (d14/partition-by-consecutive :px [{:px 1}, {:px 2}, {:px 3} {:px 5}]))
+        "when given is not sorted consecutive")))

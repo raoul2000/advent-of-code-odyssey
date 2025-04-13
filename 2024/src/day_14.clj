@@ -352,15 +352,15 @@ p=9,5 v=-3,-3
                 (if (= (-> acc last axis-key inc) (axis-key robot))
                   (conj acc robot)
                   (vector robot)))) [] robots))
-  
+
   (max-consecutive-by-axis :px [{:px 2} {:px 3} {:px 4}])
 
   ;; using partition-by
   (map list [2 3 4] [1 2 3 4])
-  (->> (map #(- %1 %2) [2 3 4] [1 2 3 4] )
-       (partition-by (partial reduce -)))
+  (->> (map #(- %1 %2) [2 3 4] [1 2 3 4])
+       (partition-by identity))
 
-  (reduce - [1 2 ])
+  (reduce - [1 2])
   (list 1 2)
   (vector 2)
   (first [])
@@ -370,3 +370,32 @@ p=9,5 v=-3,-3
 
   ;;
   )
+
+(defn count-consecutive-by-axis [axis-k robots]
+  (->> robots
+       (sort-by axis-k)
+       (map :px)
+       ((juxt  next identity))
+       (apply map -)
+       (partition-by identity)
+       (filter #(= 1 (first %)))
+       (map count)
+       #_(apply max)
+       #_inc
+       ))
+
+(comment
+
+  (partition-by identity [1 2 3 1 1])
+  (count-consecutive-by-axis :px [{:px 2} {:px 1} {:px 5} {:px 6} {:px 7} {:px 4}])
+
+  (count-consecutive-by-axis :px [{:px 2} {:px 4} {:px 30} {:px 33} {:px 36}])
+  (apply max '())
+
+
+  
+  ;;
+  )
+
+(defn partition-by-consecutive [axis-k robots]
+  (sort-by axis-k robots))
