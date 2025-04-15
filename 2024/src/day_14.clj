@@ -68,9 +68,9 @@ p=9,5 v=-3,-3
 
 
 (comment
-;; moving a robot on the x-axis for sec-count sec, given col-count
-;; max-x = (dec col-count) 
-;; 
+  ;; moving a robot on the x-axis for sec-count sec, given col-count
+  ;; max-x = (dec col-count) 
+  ;; 
 
   (defn move [{:keys [px vx] :as _robot} col-count sec-count]
     (let [max-x (dec col-count)
@@ -169,6 +169,7 @@ p=9,5 v=-3,-3
 
 (comment
   (def grid (create-grid 11 7))
+  (print-grid grid)
   (print-grid (set-at-pos grid 0 0))
   (print-grid (set-at-pos grid 1 1))
   (print-grid (set-at-pos (set-at-pos grid 1 1) 1 1))
@@ -178,6 +179,8 @@ p=9,5 v=-3,-3
 
 (defn place-robot [grid {:keys [px py] :as _robot}]
   (set-at-pos grid px py))
+
+
 
 (comment
   (def col-count 11)
@@ -414,19 +417,49 @@ p=9,5 v=-3,-3
   )
 
 (comment
-  (defn move-one-sec [robots]
-    (map #(move-robot % 103 101 1) robots)
-    #_(map #(move-robot % 11 7 1) robots))
+  (def state {:robots [{:px 1 :py 2 :vx 1 :vy 2}
+                       {:px 1 :py 3 :vx 2 :vy 5}]
+              :sec-count 0
+              :col-count 101
+              :row-count 103})
 
-  (last (take 2000 (iterate move-one-sec (parse puzzle-input))))
+  (defn move-one-sec [{:keys [col-count row-count] :as state}]
+    (-> state
+        (update :sec-count inc)
+        (update :robots (fn [old-robots] 
+                          (map #(move-robot % col-count row-count 1) old-robots)))))
 
-  (->> (parse puzzle-input)
+  (defn initial-state [input col-count row-count]
+    {:robots (parse input)
+     :col-count col-count
+     :row-count row-count
+     :sec-count 0})
+
+  (move-one-sec (initial-state puzzle-input 101 103))
+
+  (last (take 1 (iterate move-one-sec (initial-state puzzle-input 101 103))))
+
+  (->> (initial-state puzzle-input 101 103)
        (iterate move-one-sec)
-       (map count-max-horizontal)
-       (take 10000)
-       (apply max))
+       (take 3) 
+       (map (fn [{:keys [robots] :as state}] 
+              (assoc state :max-h (count-max-horizontal robots))))
+       #_(take 10000)
+       last
+       #_(apply max))
   ;;=> 5
 
+
+
+  ;; let's try to visualize the grid with robots placed in it
+
+  (defn draw-robots [{:keys [robots col-count row-count]}]
+    (let [grid (create-grid col-count row-count)
+          filled (reduce (fn [grd robot]
+                           (place-robot grd robot)) grid robots)]
+      (print-grid filled)))
+
+  (draw-robots (initial-state puzzle-input 101 103))
 
 
   ;;

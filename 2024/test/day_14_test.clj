@@ -93,33 +93,13 @@
    (testing "Count consecutive robots on given axis"
      (is (=  3
              (d14/count-consecutive-by-axis :px [{:px 2} {:px 3} {:px 4}])))
-
      (is (=  3
              (d14/count-consecutive-by-axis :px [{:px 2} {:px 4} {:px 3}])))
-
      (is (=  0
              (d14/count-consecutive-by-axis :px [{:px 2} {:px 4} {:px 30} {:px 11} {:px 13}])))
-     
      (is (=  2
              (d14/count-consecutive-by-axis :px [{:px 3} {:px 40} {:px 30} {:px 4} {:px 31}])))
-     )))
+     (is (=  2
+             (d14/count-consecutive-by-axis :px [{:px 3} {:px 40} {:px 30} {:px 4} {:px 4} {:px 4} {:px 4}]))
+         "when robots overlap"))))
 
-
-(deftest partition-by-consecutive-test
-  (testing "partition by consecutive pos on given axis"
-    (is (= '()
-           (d14/partition-by-consecutive :px []))
-        "returns empty seq when empty seq is given")
-
-    (is (= '({:px 2}, {:px 3}, {:px 4})
-           (d14/partition-by-consecutive :px [{:px 2}, {:px 3}, {:px 4}]))
-        "returns same as given when given is consecutive")
-
-    (is (= '({:px 2}, {:px 3}, {:px 4})
-           (d14/partition-by-consecutive :px [{:px 4}, {:px 3}, {:px 2}]))
-        "when given is not sorted consecutive")
-
-    (is (= '(({:px 1} {:px 2}, {:px 3})
-             ({:px 5}))
-           (d14/partition-by-consecutive :px [{:px 1}, {:px 2}, {:px 3} {:px 5}]))
-        "when given is not sorted consecutive")))
