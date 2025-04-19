@@ -417,6 +417,8 @@ p=9,5 v=-3,-3
   )
 
 (comment
+  ;; let's work with a state
+
   (def state {:robots [{:px 1 :py 2 :vx 1 :vy 2}
                        {:px 1 :py 3 :vx 2 :vy 5}]
               :sec-count 0
@@ -426,7 +428,7 @@ p=9,5 v=-3,-3
   (defn move-one-sec [{:keys [col-count row-count] :as state}]
     (-> state
         (update :sec-count inc)
-        (update :robots (fn [old-robots] 
+        (update :robots (fn [old-robots]
                           (map #(move-robot % col-count row-count 1) old-robots)))))
 
   (defn initial-state [input col-count row-count]
@@ -437,21 +439,26 @@ p=9,5 v=-3,-3
 
   (move-one-sec (initial-state puzzle-input 101 103))
 
-  (last (take 1 (iterate move-one-sec (initial-state puzzle-input 101 103))))
+  (last (take 1 (rest (iterate move-one-sec (initial-state puzzle-input 101 103)))))
 
-  (->> (initial-state puzzle-input 101 103)
-       (iterate move-one-sec)
-       (take 3) 
-       (map (fn [{:keys [robots] :as state}] 
-              (assoc state :max-h (count-max-horizontal robots))))
-       #_(take 10000)
-       last
-       #_(apply max))
-  ;;=> 5
+  (def state-1 (->> (initial-state puzzle-input 101 103)
+                    (iterate move-one-sec)
+                    rest
+                    #_(take 30)
+                    (map (fn [{:keys [robots] :as state}]
+                           (assoc state :max-h (count-max-horizontal robots))))
+                    ;; here we set the lower limit of horizontally aligned robots
+                    ;; and drop states when below the limit
+                    (drop-while #(< (:max-h %) 7))
+                    first
+                    #_(take 1000)
+                    #_last
+                    #_(apply max)))
 
 
 
   ;; let's try to visualize the grid with robots placed in it
+  ;; this way we can check is a christmas tree is prssent in the grid
 
   (defn draw-robots [{:keys [robots col-count row-count]}]
     (let [grid (create-grid col-count row-count)
@@ -460,6 +467,22 @@ p=9,5 v=-3,-3
       (print-grid filled)))
 
   (draw-robots (initial-state puzzle-input 101 103))
+  (draw-robots state-1)
+
+  ;; => 6644 🤩⭐
+
+  ;; Ok, this was a lucky shot !
+  ;; after setting the lower limit to 7, the next one was 31 successive horizontal robots
+  ;; and drawing the grid reveales a nive christmas trr 🎄
+
+  ;; check resources/day_14_christmas_tree.txt
+
+
+  ;; That was not the more deterministic way of solving this one, but the result
+  ;; is here, and after so many time searching, I'll take it and fly to
+  ;; the next day !
+
+
 
 
   ;;
