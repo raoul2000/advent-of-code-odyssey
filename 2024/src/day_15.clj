@@ -44,7 +44,7 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
 (def robot-char \@)
 (def box-char \O)
 (def space-char \.)
-(def limit-char \#)
+(def border-char \#)
 
 ;; moves
 (def move-up-char \^)
@@ -133,6 +133,91 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
 
 (defn attempt-move [grid move-char]
   grid)
+
+(comment
+  ;; given a move, and the tiles sequence in front of the robot in the move direction
+  ;; Every tilke left by the robot is a empty tile '.'
+  (def v1 [robot-char space-char space-char  box-char border-char])
+  (def v2 [robot-char space-char space-char  box-char space-char border-char])
+  (def v3 [robot-char box-char space-char space-char  box-char space-char border-char])
+  (def v4 [robot-char box-char box-char space-char space-char  box-char space-char border-char])
+  (def r1 [space-char space-char  robot-char box-char border-char])
+
+  (partition-by #(= space-char %) v1)
+  (partition-by #(= space-char %) v2)
+  (partition-by #(= space-char %) v3)
+  (partition-by #(= space-char %) v4)
+
+  (loop [cur (first v1)
+         remain (rest v1)
+         result []]
+    (if (or (empty? remain)
+            (not= space-char (first remain)))
+      result
+      (recur (first remain)
+             (remain remain))))
+
+
+  ;;
+  )
+
+
+
+(comment
+  ;; given a grid, and a vector as a pos + a direction, 
+  ;; replace this vector with another one
+  (def g (:grid (create-initial-state sample-input)))
+
+
+  (def dpos [identity inc]) ;; move down
+
+  ;; move down
+  (take-while #(< (second %) 5) (iterate  (juxt (comp identity first) (comp inc second)) [1 1]))
+
+  (def move move-down-char)
+
+  (let [orig-pos [1 1]
+        grid    (:grid (create-initial-state sample-input))
+        [dx dy] (cond
+                  (= move-down-char move)    [identity inc]
+                  (= move-up-char move)      [identity dec]
+                  (= move-left-char move)    [dec identity]
+                  (= move-right-char move)   [inc identity]
+                  :else (throw (ex-info "invalid move" {:move move})))]
+    (take-while #(not=  border-char (get-at-pos grid  %)) (iterate  (juxt (comp dx first) (comp dy second)) orig-pos)))
+
+
+  (defn vector-positions 
+    "Given the robot position and a move, returns a seq of all positions from the robot
+     to the grid border, excluding the border pos.)"
+    [orig-pos grid move]
+    (let [[dx dy] (cond
+                    (= move-down-char move)    [identity inc]
+                    (= move-up-char move)      [identity dec]
+                    (= move-left-char move)    [dec identity]
+                    (= move-right-char move)   [inc identity]
+                    :else (throw (ex-info "invalid move" {:move move})))]
+      (take-while #(not=  border-char (get-at-pos grid  %)) (iterate  (juxt (comp dx first) (comp dy second)) orig-pos))))
+  
+  (vector-positions [1 1] g move-down-char)
+
+
+  (get-at-pos g [1 1])
+  (get-at-pos g [1 2])
+  (get-at-pos g [1 3])
+
+
+
+  ;; read vector
+
+  (defn read-vector [pos grid direction])
+
+  ;;
+  )
+
+
+
+
 
 (defn apply-move
   "Given the current grid and move seq state, apply the first move and returns
