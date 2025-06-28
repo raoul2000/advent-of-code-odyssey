@@ -66,7 +66,12 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
 (defn parse-moves [lines]
   (vec (s/join lines)))
 
-(defn parse-input [input]
+(defn parse-input
+  "Parse and load inpit into a map. This map contains following keys : 
+   
+   - `:grid` : vector of vector representing the grid
+   - `:moves` : seq of move characters"
+  [input]
   (let [[grid-str _separator moves-str] (partition-by #(= % "") (s/split-lines input))]
     {:grid  (parse-grid grid-str)
      :moves (parse-moves moves-str)}))
@@ -94,7 +99,8 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
        (map #(apply str %))))
 
 (defn print-grid [grid]
-  (print (s/join "\n" (grid->str grid))))
+  (print (s/join "\n" (grid->str grid)))
+  grid)
 
 (comment
   (def grid-1 (:grid (parse-input sample-input)))
@@ -117,22 +123,14 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
   ;;
   )
 
-(defn create-initial-state
-  "Create map describing the initial state. This map contains following keys : 
-   
-   - `:grid` : vector of vector representing the grid
-   - `:moves` : seq of move characters
-   - `:robot-pos` : [ x y ] vector representing position of the robot "
-  [input]
-  (let [partial-state (parse-input input)]
-    (assoc partial-state :robot-pos (find-robot-pos (:grid partial-state)))))
+;; ERROR : a move is one step, only one step !
 
+(defn apply-move-on-tiles
+  "Given a seq of tiles, returns a new seq of tiles after robot move."
+  [tiles]
+  (concat (filter #(= \. %) tiles)
+          (remove #(= \. %) tiles)))
 
-;; now we have all function to access and update the grid.
-;; What we need is a function like the one below : 
-
-(defn attempt-move [grid move-char]
-  grid)
 
 (comment
   ;; given a move, and the tiles sequence in front of the robot in the move direction
@@ -151,11 +149,7 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
   (concat (filter #(= \. %) v1)
           (remove #(= \. %) v1))
 
-  (defn apply-move-on-tiles
-    "Given a seq of tiles, returns a new seq of tiles after robot move."
-    [tiles]
-    (concat (filter #(= \. %) tiles)
-            (remove #(= \. %) tiles)))
+
 
   (apply-move-on-tiles v1)
   (apply-move-on-tiles v2)
@@ -165,12 +159,23 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
   ;;
   )
 
-
+(defn vector-positions
+  "Given the robot position and a move, returns a seq of all positions from the robot
+     to the grid border, excluding the border pos."
+  [robot-pos grid move]
+  (let [[dx dy] (cond
+                  (= move-down-char move)    [identity inc]
+                  (= move-up-char move)      [identity dec]
+                  (= move-left-char move)    [dec identity]
+                  (= move-right-char move)   [inc identity]
+                  :else (throw (ex-info "invalid move" {:move move})))]
+    (->> (iterate  (juxt (comp dx first) (comp dy second)) robot-pos)
+         (take-while #(not=  border-char (get-at-pos grid  %))))))
 
 (comment
   ;; given a grid, and a vector as a pos + a direction, 
   ;; replace this vector with another one
-  (def g (:grid (create-initial-state sample-input)))
+  (def g (:grid (parse-input sample-input)))
 
 
   (def dpos [identity inc]) ;; move down
@@ -181,7 +186,7 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
   (def move move-down-char)
 
   (let [orig-pos [1 1]
-        grid    (:grid (create-initial-state sample-input))
+        grid    (:grid (parse-input sample-input))
         [dx dy] (cond
                   (= move-down-char move)    [identity inc]
                   (= move-up-char move)      [identity dec]
@@ -191,19 +196,11 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
     (take-while #(not=  border-char (get-at-pos grid  %)) (iterate  (juxt (comp dx first) (comp dy second)) orig-pos)))
 
 
-  (defn vector-positions
-    "Given the robot position and a move, returns a seq of all positions from the robot
-     to the grid border, excluding the border pos."
-    [orig-pos grid move]
-    (let [[dx dy] (cond
-                    (= move-down-char move)    [identity inc]
-                    (= move-up-char move)      [identity dec]
-                    (= move-left-char move)    [dec identity]
-                    (= move-right-char move)   [inc identity]
-                    :else (throw (ex-info "invalid move" {:move move})))]
-      (take-while #(not=  border-char (get-at-pos grid  %)) (iterate  (juxt (comp dx first) (comp dy second)) orig-pos))))
+
 
   (vector-positions [1 1] g move-down-char)
+  (vector-positions [1 1] g move-up-char)
+
 
 
   (get-at-pos g [1 1])
@@ -217,11 +214,40 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
          (map #(get-at-pos grid %))))
 
 
-  (defn attempt-move [grid move-char]
-    (let [tiles-pos ()]))
   ;;
   )
 
+
+;; now we have all function to access and update the grid.
+;; What we need is a function like the one below : 
+
+(defn attempt-move [grid move-char]
+  (let [robot-pos     (find-robot-pos grid)
+        vector-pos-xs (vector-positions robot-pos grid move-char)]
+    (if (= 1 (count vector-pos-xs))
+      grid
+      (->> vector-pos-xs
+           (read-vector grid)
+           (apply-move-on-tiles)
+           (map #(vector %1 %2) vector-pos-xs)
+           (reduce (fn [acc [pos c]]
+                     (set-at-pos acc pos c)) grid)))))
+
+(comment
+  (def grid (:grid (parse-input sample-input)))
+  (def v-pos (vector-positions [4 4] grid move-right-char))
+
+  (attempt-move grid move-up-char)
+  (attempt-move grid move-down-char)
+
+  (->> v-pos
+       (read-vector grid)
+       (apply-move-on-tiles)
+       (map #(vector %1 %2) v-pos)
+       (reduce (fn [acc [pos c]]
+                 (set-at-pos acc pos c)) grid))
+  ;;
+  )
 
 
 (defn apply-move
@@ -230,28 +256,38 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
    theattemps succeeded."
   [{:keys [moves grid] :as state}]
   (let [updated-grid      (attempt-move grid (first moves))
-        updated-robot-pos (find-robot-pos updated-grid)
         updated-moves     (rest moves)]
     (-> state
         (assoc :grid      updated-grid)
-        (assoc :robot-pos updated-robot-pos)
         (assoc :moves     updated-moves))))
 
 ;; ...and then call apply-move until no more moves are to process
 
 (comment
-  (def state (create-initial-state sample-input))
-  (def state (create-initial-state puzzle-input))
+  (def state (parse-input sample-input))
+  (def state (parse-input puzzle-input))
   (count (:moves state))
 
-  (->> state
-       apply-move
-       apply-move
-       apply-move
-       :moves
-       count)
 
-  (time (first (drop-while  #(seq (:moves %)) (iterate apply-move state))))
+  (:grid state)
+
+
+
+  (time (first (drop-while  #(seq (:moves %)) (iterate apply-move (parse-input sample-input)))))
+  (time (first (drop-while  #(seq (:moves %)) (iterate apply-move (parse-input puzzle-input)))))
+
+
+  (tap> 1)
+  (defn output [state]
+    (print-grid (:grid state))
+
+    (println (first (:moves state)))
+    (println "--------------------")
+    state)
+
+  (first (drop-while  #(seq (:moves %)) (iterate (comp output apply-move) (parse-input sample-input))))
   ;;
   )
+
+
 
