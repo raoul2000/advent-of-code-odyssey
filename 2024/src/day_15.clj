@@ -125,12 +125,74 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
 
 ;; ERROR : a move is one step, only one step !
 
-(defn apply-move-on-tiles
+(defn apply-move-on-tiles_old
   "Given a seq of tiles, returns a new seq of tiles after robot move."
   [tiles]
   (concat (filter #(= \. %) tiles)
           (remove #(= \. %) tiles)))
 
+(comment
+  ;; @ . . . . => . @ . . .
+  ;; @ O . O O => . @ O O O
+  ;; @ O O . O => . @ O O O
+
+  ;; is there a space ahead ? (before reaching a )
+  (some #(= % space-char) [\@ \.])
+  (some #(= % space-char) [\@ \O])
+
+  (def available-space-ahead? (partial some #(= % space-char)))
+
+  (available-space-ahead? [1 2])
+  (available-space-ahead? [1 2 space-char])
+
+
+
+  (split-with (partial not= 0) [2 0 1])
+  (split-with (partial not= 0) [2 1 0])
+  (split-with (partial not= 0) [2 1 0 0])
+  (split-with (partial not= 0) [2 0])
+  (split-with (partial not= 0) [2 1 1 0 1 2 1 0])
+  (split-with (partial not= 0) [2 1 0 2 0 1])
+  (split-with (partial not= 0) [2 1 1  0 1])
+
+  (cons 1 '())
+
+
+  (def available-space-ahead? (partial some #(= % 0)))
+  (defn f [xs]
+    (if (available-space-ahead? xs)
+      (let [[head tail]  (split-with (partial not= 0) xs)]
+        (concat (cons (first tail) head) (rest tail)))
+      xs))
+
+  (available-space-ahead? [2 space-char])
+  (f [robot-char space-char])
+  (f [robot-char box-char space-char])
+  (f [robot-char box-char box-char space-char])
+  (f [robot-char space-char box-char box-char space-char])
+  (f [2 1])
+  (f [2 0 1 1])
+  (f [2 1 0 1])
+  (f [2 1 1 0 0 1])
+  (f [2 1 1 1 0 1])
+  (f [2 0 0 1 1 1 0 1])
+  ;;
+  )
+
+(def available-space-ahead? (partial some #(= % space-char)))
+(defn apply-move-on-tiles
+  "Given a seq of tiles, returns a new seq of tiles after robot move."
+  [tiles]
+  (if (available-space-ahead? tiles)
+    (let [[head tail]  (split-with (partial not= space-char) tiles)]
+      (concat (cons (first tail) head) (rest tail)))
+    tiles))
+
+(comment
+  (apply-move-on-tiles [robot-char box-char])
+  ;;(apply-move-on-tiles)
+  ;;
+  )
 
 (comment
   ;; given a move, and the tiles sequence in front of the robot in the move direction
@@ -209,13 +271,13 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
 
   ;; read vector
 
-  (defn read-vector [grid vector-pos]
-    (->> vector-pos
-         (map #(get-at-pos grid %))))
 
 
   ;;
   )
+(defn read-vector [grid vector-pos]
+  (->> vector-pos
+       (map #(get-at-pos grid %))))
 
 
 ;; now we have all function to access and update the grid.
@@ -237,15 +299,17 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
   (def grid (:grid (parse-input sample-input)))
   (def v-pos (vector-positions [4 4] grid move-right-char))
 
+
+
   (attempt-move grid move-up-char)
   (attempt-move grid move-down-char)
 
   (->> v-pos
        (read-vector grid)
-       (apply-move-on-tiles)
-       (map #(vector %1 %2) v-pos)
-       (reduce (fn [acc [pos c]]
-                 (set-at-pos acc pos c)) grid))
+       #_(apply-move-on-tiles)
+       #_(map #(vector %1 %2) v-pos)
+       #_(reduce (fn [acc [pos c]]
+                   (set-at-pos acc pos c)) grid))
   ;;
   )
 

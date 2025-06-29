@@ -6,14 +6,25 @@
 
 ((deftest apply-move-on-tiles-test
    (testing "Moving titles on robot move"
-     (is (= '(\. \O)
-            (d15/apply-move-on-tiles [\. \O])))
+     (is (= '(\. \@)
+            (d15/apply-move-on-tiles [\@ \.]))
+         "switch when 2 tiles with space")
 
-     (is (= '(\. \O)
-            (d15/apply-move-on-tiles [\O \.])))
+     (is (= '(\@ \O)
+            (d15/apply-move-on-tiles [\@ \O]))
+         "don't cvhange when no space")
 
-     (is (= '(\. \O \O \O)
-            (d15/apply-move-on-tiles [\O \O \O \.]))))))
+     (is (= '(\. \@ \O)
+            (d15/apply-move-on-tiles [\@ \. \O])))
+
+     (is (= '(\. \@ \. \O)
+            (d15/apply-move-on-tiles [\@ \. \. \O])))
+
+     (is (= '(\. \@ \O \O)
+            (d15/apply-move-on-tiles [\@ \. \O \O])))
+
+     (is (= '(\. \@ \O \O)
+            (d15/apply-move-on-tiles [\@ \O \O \.]))))))
 
 (deftest vector-positions-test
   (let [grid (:grid (d15/parse-input d15/sample-input))]
@@ -35,4 +46,12 @@
 
       (is (= '([1 1])
              (d15/vector-positions [1 1] grid d15/move-up-char))
-          "robot at limit up")))) 
+          "robot at limit up")))
+
+  (let [grid2 (-> ;; move robot position down
+               (:grid (d15/parse-input d15/sample-input))
+               (d15/set-at-pos  [4 5] d15/robot-char)
+               (d15/set-at-pos  [4 4] d15/space-char))]
+    (is (= '([4 5] [3 5])
+           (d15/vector-positions [4 5] grid2 d15/move-left-char))
+        "stops on border char"))) 
