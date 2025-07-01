@@ -102,14 +102,6 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
   (print (s/join "\n" (grid->str grid)))
   grid)
 
-(comment
-  (def grid-1 (:grid (parse-input sample-input)))
-  (grid-size grid-1)
-  (print-grid grid-1)
-  (->> (set-at-pos grid-1 [4 4] \Z) print-grid)
-  ;;
-  )
-
 (defn find-robot-pos
   "Find and returns the [x y] position of the robot in the given grid"
   [grid]
@@ -117,67 +109,6 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
     (first (drop-while #(not= robot-char (get-at-pos grid %)) (for [x (range 0 col-count)
                                                                     y (range 0 line-count)]
                                                                 [x y])))))
-
-(comment
-  (find-robot-pos (:grid (parse-input sample-input)))
-  ;;
-  )
-
-;; ERROR : a move is one step, only one step !
-
-(defn apply-move-on-tiles_old
-  "Given a seq of tiles, returns a new seq of tiles after robot move."
-  [tiles]
-  (concat (filter #(= \. %) tiles)
-          (remove #(= \. %) tiles)))
-
-(comment
-  ;; @ . . . . => . @ . . .
-  ;; @ O . O O => . @ O O O
-  ;; @ O O . O => . @ O O O
-
-  ;; is there a space ahead ? (before reaching a )
-  (some #(= % space-char) [\@ \.])
-  (some #(= % space-char) [\@ \O])
-
-  (def available-space-ahead? (partial some #(= % space-char)))
-
-  (available-space-ahead? [1 2])
-  (available-space-ahead? [1 2 space-char])
-
-
-
-  (split-with (partial not= 0) [2 0 1])
-  (split-with (partial not= 0) [2 1 0])
-  (split-with (partial not= 0) [2 1 0 0])
-  (split-with (partial not= 0) [2 0])
-  (split-with (partial not= 0) [2 1 1 0 1 2 1 0])
-  (split-with (partial not= 0) [2 1 0 2 0 1])
-  (split-with (partial not= 0) [2 1 1  0 1])
-
-  (cons 1 '())
-
-
-  (def available-space-ahead? (partial some #(= % 0)))
-  (defn f [xs]
-    (if (available-space-ahead? xs)
-      (let [[head tail]  (split-with (partial not= 0) xs)]
-        (concat (cons (first tail) head) (rest tail)))
-      xs))
-
-  (available-space-ahead? [2 space-char])
-  (f [robot-char space-char])
-  (f [robot-char box-char space-char])
-  (f [robot-char box-char box-char space-char])
-  (f [robot-char space-char box-char box-char space-char])
-  (f [2 1])
-  (f [2 0 1 1])
-  (f [2 1 0 1])
-  (f [2 1 1 0 0 1])
-  (f [2 1 1 1 0 1])
-  (f [2 0 0 1 1 1 0 1])
-  ;;
-  )
 
 (def available-space-ahead? (partial some #(= % space-char)))
 (defn apply-move-on-tiles
@@ -187,39 +118,6 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
     (let [[head tail]  (split-with (partial not= space-char) tiles)]
       (concat (cons (first tail) head) (rest tail)))
     tiles))
-
-(comment
-  (apply-move-on-tiles [robot-char box-char])
-  ;;(apply-move-on-tiles)
-  ;;
-  )
-
-(comment
-  ;; given a move, and the tiles sequence in front of the robot in the move direction
-  ;; Every tilke left by the robot is a empty tile '.'
-  (def v1 [robot-char space-char space-char  box-char border-char])
-  (def v2 [robot-char space-char space-char  box-char space-char border-char])
-  (def v3 [robot-char box-char space-char space-char  box-char space-char border-char])
-  (def v4 [robot-char box-char box-char space-char space-char  box-char space-char border-char])
-  (def r1 [space-char space-char  robot-char box-char border-char])
-
-  (partition-by #(= space-char %) v1)
-  (partition-by #(= space-char %) v2)
-  (partition-by #(= space-char %) v3)
-  (partition-by #(= space-char %) v4)
-
-  (concat (filter #(= \. %) v1)
-          (remove #(= \. %) v1))
-
-
-
-  (apply-move-on-tiles v1)
-  (apply-move-on-tiles v2)
-  (apply-move-on-tiles v3)
-  (apply-move-on-tiles v4)
-
-  ;;
-  )
 
 (defn vector-positions
   "Given the robot position and a move, returns a seq of all positions from the robot
@@ -234,47 +132,6 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
     (->> (iterate  (juxt (comp dx first) (comp dy second)) robot-pos)
          (take-while #(not=  border-char (get-at-pos grid  %))))))
 
-(comment
-  ;; given a grid, and a vector as a pos + a direction, 
-  ;; replace this vector with another one
-  (def g (:grid (parse-input sample-input)))
-
-
-  (def dpos [identity inc]) ;; move down
-
-  ;; move down
-  (take-while #(< (second %) 5) (iterate  (juxt (comp identity first) (comp inc second)) [1 1]))
-
-  (def move move-down-char)
-
-  (let [orig-pos [1 1]
-        grid    (:grid (parse-input sample-input))
-        [dx dy] (cond
-                  (= move-down-char move)    [identity inc]
-                  (= move-up-char move)      [identity dec]
-                  (= move-left-char move)    [dec identity]
-                  (= move-right-char move)   [inc identity]
-                  :else (throw (ex-info "invalid move" {:move move})))]
-    (take-while #(not=  border-char (get-at-pos grid  %)) (iterate  (juxt (comp dx first) (comp dy second)) orig-pos)))
-
-
-
-
-  (vector-positions [1 1] g move-down-char)
-  (vector-positions [1 1] g move-up-char)
-
-
-
-  (get-at-pos g [1 1])
-  (get-at-pos g [1 2])
-  (get-at-pos g [1 3])
-
-  ;; read vector
-
-
-
-  ;;
-  )
 (defn read-vector [grid vector-pos]
   (->> vector-pos
        (map #(get-at-pos grid %))))
@@ -295,25 +152,6 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
            (reduce (fn [acc [pos c]]
                      (set-at-pos acc pos c)) grid)))))
 
-(comment
-  (def grid (:grid (parse-input sample-input)))
-  (def v-pos (vector-positions [4 4] grid move-right-char))
-
-
-
-  (attempt-move grid move-up-char)
-  (attempt-move grid move-down-char)
-
-  (->> v-pos
-       (read-vector grid)
-       #_(apply-move-on-tiles)
-       #_(map #(vector %1 %2) v-pos)
-       #_(reduce (fn [acc [pos c]]
-                   (set-at-pos acc pos c)) grid))
-  ;;
-  )
-
-
 (defn apply-move
   "Given the current grid and move seq state, apply the first move and returns
    the updated grid,  and the rest of moves. Robot position may also be updated if 
@@ -325,33 +163,35 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
         (assoc :grid      updated-grid)
         (assoc :moves     updated-moves))))
 
-;; ...and then call apply-move until no more moves are to process
+(defn find-all-box-pos
+  "Find and returns a seq of [x y] position of box in the given grid"
+  [grid]
+  (let [[col-count line-count] (grid-size grid)]
+    (filter #(= box-char (get-at-pos grid %)) (for [x (range 0 col-count)
+                                                    y (range 0 line-count)]
+                                                [x y]))))
+
+(defn compute-final-score [grid]
+  (->>
+   (find-all-box-pos grid)
+   (reduce (fn [acc [x y]]
+             (+ acc (+ x (* 100 y)))) 0)))
+
+(defn solution-1 [input]
+  (->>
+   (parse-input input)
+   (iterate apply-move)
+   (drop-while #(seq (:moves %)))
+   first
+   :grid
+   (compute-final-score)))
 
 (comment
-  (def state (parse-input sample-input))
-  (def state (parse-input puzzle-input))
-  (count (:moves state))
 
+  (solution-1 sample-input)
+  ;; 10092 it taste good ..
 
-  (:grid state)
-
-
-
-  (time (first (drop-while  #(seq (:moves %)) (iterate apply-move (parse-input sample-input)))))
-  (time (first (drop-while  #(seq (:moves %)) (iterate apply-move (parse-input puzzle-input)))))
-
-
-  (tap> 1)
-  (defn output [state]
-    (print-grid (:grid state))
-
-    (println (first (:moves state)))
-    (println "--------------------")
-    state)
-
-  (first (drop-while  #(seq (:moves %)) (iterate (comp output apply-move) (parse-input sample-input))))
+  (solution-1 puzzle-input)
+  ;; ... 1516281 ⭐
   ;;
   )
-
-
-
