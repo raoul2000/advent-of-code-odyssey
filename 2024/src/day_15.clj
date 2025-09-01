@@ -236,13 +236,30 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
                          \. [\. \.]
                          \O [\[ \]]
                          \@ [\@ \.])))
-       flatten))
+       flatten
+       vec))
 
 (defn expand-grid [grid]
-  (map expand-line grid))
+  (mapv expand-line grid))
 
 (comment
   (print-grid (:grid (parse-input sample-input)))
   (print-grid (expand-grid (:grid (parse-input sample-input))))
   ;;
   )
+
+;; moving
+;;
+;; Logic to handle moves, differs from part 1.
+;; We can distinguish 2 patterns : 
+;; - moving horizontal (left or right) - a priori easy
+;; - moving vertical (up or down) - muuuch more tricky
+;;
+;; Moving horizontal
+;; - to test if the move is possible, just scan the line
+;; - changes ONLY the line where the robot is located
+;; - boxes are made of unbreakable character pairs : "[]"
+;; Moving vertical
+;; - to scan if the move is possible .... build graph and check all leaves ?
+;; - affect potentially several cols
+
