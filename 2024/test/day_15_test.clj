@@ -54,4 +54,46 @@
                (d15/set-at-pos  [4 4] d15/space-char))]
     (is (= '([4 5] [3 5])
            (d15/vector-positions [4 5] grid2 d15/move-left-char))
-        "stops on border char"))) 
+        "stops on border char")))
+
+(deftest expand-grid-test
+  (testing "expand single line"
+    (is (= [\# \#]
+           (d15/expand-line [\#])))
+    (is (= [\# \# \# \#]
+           (d15/expand-line [\# \#])))
+    (is (= [\[ \]]
+           (d15/expand-line [\O])))
+    (is (= [\# \# \[ \] \# \#]
+           (d15/expand-line [\# \O \#])))
+    (is (= [\# \# \@ \. \# \#]
+           (d15/expand-line [\# \@ \#]))))
+
+
+  (testing "Expand grid"
+    (is (= [[\# \# \# \# \# \#]
+            [\# \# \. \. \# \#]
+            [\# \# \# \# \# \#]]
+
+           (d15/expand-grid [[\# \# \#]
+                             [\# \. \#]
+                             [\# \# \#]]))
+        "expand empty small grid")
+
+    (is (= [[\# \# \# \# \# \# \# \#]
+            [\# \# \. \. \[ \] \# \#]
+            [\# \# \# \# \# \# \# \#]]
+
+           (d15/expand-grid [[\# \# \# \#]
+                             [\# \. \O \#]
+                             [\# \# \# \#]]))
+        "expand space and box")
+
+    (is (= [[\# \# \# \# \# \# \# \#]
+            [\# \# \@ \. \# \# \# \#]
+            [\# \# \# \# \# \# \# \#]]
+
+           (d15/expand-grid [[\# \# \# \#]
+                             [\# \@ \# \#]
+                             [\# \# \# \#]]))
+        "expand robot and space"))) 
