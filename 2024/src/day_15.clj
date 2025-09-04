@@ -282,15 +282,27 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
   (apply str (reverse "abc"))
 
 
+  ((comp vec reverse) [1 2 3])
+  (identity [1 2])
+  (get [[1] [2]] 0)
   ;;
   )
 
-(defn update-line-on-horizontal-move [line move-char]
-  (let [line-str (apply str line)]
+(defn update-line-on-horizontal-move
+  "Apply horizontal move `move-char` to the given grid line and returns it modified if the move is possible.
+   The given `line` is a vec of chars."
+  [line move-char]
+  (let [order-fn (if (= move-char move-right-char) identity (comp vec reverse))
+        line-str (apply str (order-fn line))]
     (if-let [[_ before-robot after-robot after-space] (re-matches #"(.*)@([\[\]]*)\.(.+)" line-str)]
-      (vec (str before-robot ".@" after-robot after-space))
+      (->> (str before-robot ".@" after-robot after-space)
+           vec
+           order-fn)
       line)))
 
-(defn move-horizontal [grid move-char]
-  (let [robot-pos  (find-robot-pos grid)])
-  grid)
+(defn move-horizontal 
+  "Apply the horizontal move `move-char` to the given `grid` and returns
+   the new grid. When the move is not possible, returns the same grid."
+  [grid move-char]
+  (let [[_robot-pos-x robot-pos-y]  (find-robot-pos grid)]
+    (update grid robot-pos-y update-line-on-horizontal-move move-char)))

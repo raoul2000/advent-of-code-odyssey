@@ -102,16 +102,35 @@
   (testing "update a single line on robot horizontal move"
     (is (= [\# \# \. \@ \[ \] \#]
            (d15/update-line-on-horizontal-move [\# \# \@ \[ \] \. \#] d15/move-right-char))
-        "move when there is space on right")
+        "move when there is space on right (1)")
+    (is (= [\# \# \. \@ \[ \] \[ \] \#]
+           (d15/update-line-on-horizontal-move [\# \# \@ \[ \] \[ \] \. \#] d15/move-right-char))
+        "move when there is space on right (2)")
+    (is (= [\# \# \. \@ \[ \] \[ \] \. \#]
+           (d15/update-line-on-horizontal-move [\# \# \@ \[ \] \. \[ \] \. \#] d15/move-right-char))
+        "move when there is space on right (3)")
     (is (= [\# \# \@ \[ \] \# \#]
            (d15/update-line-on-horizontal-move [\# \# \@ \[ \] \# \#] d15/move-right-char))
         "no change when no space on right")
     (is (= [\# \# \. \@ \[ \] \. \#]
            (d15/update-line-on-horizontal-move [\# \# \@ \. \[ \] \. \#] d15/move-right-char))
-        "move when there is space just after robot "))
+        "move when there is space just after robot on right")
+
+    (is (= [\# \# \[ \] \@ \. \#]
+           (d15/update-line-on-horizontal-move [\# \# \. \[ \] \@ \#] d15/move-left-char))
+        "move when there is space on left")
+    (is (= [\# \# \[ \] \[ \] \@ \. \#]
+           (d15/update-line-on-horizontal-move [\# \# \. \[ \] \[ \] \@ \#] d15/move-left-char))
+        "move when there is space on left")
+    (is (= [\# \# \[ \] \@ \# \#]
+           (d15/update-line-on-horizontal-move [\# \#  \[ \] \@ \# \#] d15/move-left-char))
+        "no change when no space on left")
+    (is (= [\# \# \.  \[ \] \@ \. \#]
+           (d15/update-line-on-horizontal-move [\# \#  \. \[ \] \. \@ \#] d15/move-left-char))
+        "move when there is space just after robot on left"))
 
 
-  #_(testing "moving the robot left or right"
+  (testing "moving the robot left or right"
       (is (= [[\# \# \# \# \# \# \# \#]
               [\# \# \. \@ \[ \] \# \#]
               [\# \# \# \# \# \# \# \#]]
@@ -120,5 +139,26 @@
                                    [\# \# \@ \. \[ \] \# \#]
                                    [\# \# \# \# \# \# \# \#]]
                                   d15/move-right-char))
-          "moving right")))
+          "moving right")
+    
+    (is (= [[\# \# \# \# \# \# \# \#]
+            [\# \# \. \[ \] \@ \. \#]
+            [\# \# \# \# \# \# \# \#]]
+    
+           (d15/move-horizontal [[\# \# \# \# \# \# \# \#]
+                                 [\# \# \. \. \[ \] \@ \#]
+                                 [\# \# \# \# \# \# \# \#]]
+                                d15/move-left-char))
+        "moving left")
+    
+    (is (= [[\# \# \# \# \# \# \# \#]
+            [\# \# \. \# \[ \] \@ \#]
+            [\# \# \# \# \# \# \# \#]]
+    
+           (d15/move-horizontal [[\# \# \# \# \# \# \# \#]
+                                 [\# \# \. \# \[ \] \@ \#]
+                                 [\# \# \# \# \# \# \# \#]]
+                                d15/move-left-char))
+        "move is not possible (no space)")
+    ))
 
