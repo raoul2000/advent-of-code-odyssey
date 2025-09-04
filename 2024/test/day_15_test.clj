@@ -96,4 +96,29 @@
            (d15/expand-grid [[\# \# \# \#]
                              [\# \@ \# \#]
                              [\# \# \# \#]]))
-        "expand robot and space"))) 
+        "expand robot and space")))
+
+(deftest move-horizontal-test
+  (testing "update a single line on robot horizontal move"
+    (is (= [\# \# \. \@ \[ \] \#]
+           (d15/update-line-on-horizontal-move [\# \# \@ \[ \] \. \#] d15/move-right-char))
+        "move when there is space on right")
+    (is (= [\# \# \@ \[ \] \# \#]
+           (d15/update-line-on-horizontal-move [\# \# \@ \[ \] \# \#] d15/move-right-char))
+        "no change when no space on right")
+    (is (= [\# \# \. \@ \[ \] \. \#]
+           (d15/update-line-on-horizontal-move [\# \# \@ \. \[ \] \. \#] d15/move-right-char))
+        "move when there is space just after robot "))
+
+
+  #_(testing "moving the robot left or right"
+      (is (= [[\# \# \# \# \# \# \# \#]
+              [\# \# \. \@ \[ \] \# \#]
+              [\# \# \# \# \# \# \# \#]]
+
+             (d15/move-horizontal [[\# \# \# \# \# \# \# \#]
+                                   [\# \# \@ \. \[ \] \# \#]
+                                   [\# \# \# \# \# \# \# \#]]
+                                  d15/move-right-char))
+          "moving right")))
+

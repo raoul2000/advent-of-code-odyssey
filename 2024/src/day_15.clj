@@ -261,5 +261,36 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
 ;; - boxes are made of unbreakable character pairs : "[]"
 ;; Moving vertical
 ;; - to scan if the move is possible .... build graph and check all leaves ?
-;; - affect potentially several cols
+;; - affect several cols (because box is 2 tiles width)
 
+(comment
+
+  (re-matches #"([\[\]]+)\.(.+)" "[].#")
+  (re-matches #"([\[\]]+)\.(.+)" "[][].#")
+  (re-matches #"([\[\]]+)\.(.+)" "[][]#")
+
+  (re-matches #"(##.*@)([\[\]]+)\.(.+)" "##.#@[][].#")
+  (re-matches #"(##.*)@([\[\]]+)\.(.+)" "##.#@[][].#")
+
+  (def s1 "##.#@[][].#")
+  (def s2 "##.#@[][].[]#")
+  (when-let [[_ before-robot after-robot after-space] (re-matches #"(##.*)@([\[\]]+)\.(.+)" s2)]
+    (str before-robot ".@" after-robot after-space))
+
+  (vec "abc")
+
+  (apply str (reverse "abc"))
+
+
+  ;;
+  )
+
+(defn update-line-on-horizontal-move [line move-char]
+  (let [line-str (apply str line)]
+    (if-let [[_ before-robot after-robot after-space] (re-matches #"(.*)@([\[\]]*)\.(.+)" line-str)]
+      (vec (str before-robot ".@" after-robot after-space))
+      line)))
+
+(defn move-horizontal [grid move-char]
+  (let [robot-pos  (find-robot-pos grid)])
+  grid)
