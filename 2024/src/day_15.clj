@@ -1,5 +1,6 @@
 (ns day-15
-  (:require [clojure.string :as s]))
+  (:require [clojure.string :as s]
+            [clojure.zip :as z]))
 
 ;; https://adventofcode.com/2024/day/15
 
@@ -263,30 +264,7 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
 ;; - to scan if the move is possible .... build graph and check all leaves ?
 ;; - affect several cols (because box is 2 tiles width)
 
-(comment
-
-  (re-matches #"([\[\]]+)\.(.+)" "[].#")
-  (re-matches #"([\[\]]+)\.(.+)" "[][].#")
-  (re-matches #"([\[\]]+)\.(.+)" "[][]#")
-
-  (re-matches #"(##.*@)([\[\]]+)\.(.+)" "##.#@[][].#")
-  (re-matches #"(##.*)@([\[\]]+)\.(.+)" "##.#@[][].#")
-
-  (def s1 "##.#@[][].#")
-  (def s2 "##.#@[][].[]#")
-  (when-let [[_ before-robot after-robot after-space] (re-matches #"(##.*)@([\[\]]+)\.(.+)" s2)]
-    (str before-robot ".@" after-robot after-space))
-
-  (vec "abc")
-
-  (apply str (reverse "abc"))
-
-
-  ((comp vec reverse) [1 2 3])
-  (identity [1 2])
-  (get [[1] [2]] 0)
-  ;;
-  )
+;; Unlike part 1, we are going to use regexp for the easy one (the horizontal moves)
 
 (defn update-line-on-horizontal-move
   "Apply horizontal move `move-char` to the given grid line and returns it modified if the move is possible.
@@ -300,9 +278,72 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
            order-fn)
       line)))
 
-(defn move-horizontal 
+(defn move-horizontal
   "Apply the horizontal move `move-char` to the given `grid` and returns
    the new grid. When the move is not possible, returns the same grid."
   [grid move-char]
   (let [[_robot-pos-x robot-pos-y]  (find-robot-pos grid)]
     (update grid robot-pos-y update-line-on-horizontal-move move-char)))
+
+;; Now the vertical move is more tricky
+
+;; - before
+;; ####################
+;; ##....[]....[]..[]##
+;; ##..[]..[]....[]..##
+;; ##...[][]...[]..[]##
+;; ##....[]......[]..##
+;; ##[]##.@..[]......##
+;; ####################
+;; - after
+;; ####################
+;; ##..[][][]..[]..[]##
+;; ##...[][].....[]..##
+;; ##....[]....[]..[]##
+;; ##.....@......[]..##
+;; ##[]##....[]......##
+;; ####################
+
+;; We see a tree structure and so, a zipper could be the way to go
+
+(comment
+  (def grid (expand-grid (:grid (parse-input sample-input))))
+  (def robot-pos (find-robot-pos grid))
+
+  (defn create-fn-branch? [grid dy]
+    (fn [node]
+      (let [[x y]       node
+            next-pos    [x (dy y)]
+            at-next-pos (get-at-pos grid next-pos)]
+        (prn at-next-pos)
+        (or (= \[ at-next-pos)
+            (= \] at-next-pos)))))
+
+  ((create-fn-branch? grid dec) [7 4])
+
+  (defn create-fn-children [grid dy]
+    (fn [branch-node]
+      (let [[x y]            branch-node
+            at-pos           (get-at-pos grid [x y])
+            [next-x next-y]  [x (dy y)]
+            at-next-pos      (get-at-pos grid [next-x next-y])]
+        (cond
+          (and (= at-pos \[)
+               (= at-next-pos \]))  [[next-x next-y] [(dec next-x) next-y]]
+          (and (= at-pos \])
+               (= at-next-pos \[))  [[next-x next-y] [(inc next-x) next-y]]
+          :else [[next-x next-y]]))))
+
+  (defn make-node [node children-seq]
+    {:pos node
+     :children children-seq})
+
+  (def  zp (z/zipper
+            (create-fn-branch? grid dec) 
+            (create-fn-children grid dec) 
+            make-node 
+            (make-node [7 5] [])))
+  (-> zp
+      z/down)
+  ;;
+  )
