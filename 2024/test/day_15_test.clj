@@ -1,5 +1,6 @@
 (ns day-15-test
   (:require [clojure.test :refer [testing deftest is are]]
+            [clojure.zip :as z]
             [clojure.set :as st]
             [day-15 :as d15]))
 
@@ -131,34 +132,77 @@
 
 
   (testing "moving the robot left or right"
-      (is (= [[\# \# \# \# \# \# \# \#]
-              [\# \# \. \@ \[ \] \# \#]
-              [\# \# \# \# \# \# \# \#]]
+    (is (= [[\# \# \# \# \# \# \# \#]
+            [\# \# \. \@ \[ \] \# \#]
+            [\# \# \# \# \# \# \# \#]]
 
-             (d15/move-horizontal [[\# \# \# \# \# \# \# \#]
-                                   [\# \# \@ \. \[ \] \# \#]
-                                   [\# \# \# \# \# \# \# \#]]
-                                  d15/move-right-char))
-          "moving right")
-    
+           (d15/move-horizontal [[\# \# \# \# \# \# \# \#]
+                                 [\# \# \@ \. \[ \] \# \#]
+                                 [\# \# \# \# \# \# \# \#]]
+                                d15/move-right-char))
+        "moving right")
+
     (is (= [[\# \# \# \# \# \# \# \#]
             [\# \# \. \[ \] \@ \. \#]
             [\# \# \# \# \# \# \# \#]]
-    
+
            (d15/move-horizontal [[\# \# \# \# \# \# \# \#]
                                  [\# \# \. \. \[ \] \@ \#]
                                  [\# \# \# \# \# \# \# \#]]
                                 d15/move-left-char))
         "moving left")
-    
+
     (is (= [[\# \# \# \# \# \# \# \#]
             [\# \# \. \# \[ \] \@ \#]
             [\# \# \# \# \# \# \# \#]]
-    
+
            (d15/move-horizontal [[\# \# \# \# \# \# \# \#]
                                  [\# \# \. \# \[ \] \@ \#]
                                  [\# \# \# \# \# \# \# \#]]
                                 d15/move-left-char))
-        "move is not possible (no space)")
-    ))
+        "move is not possible (no space)")))
 
+(deftest create-grid-zipper-test
+  (testing "grid zipper"
+    (let [grid-base [[\# \# \# \# \#]
+                     [\# \. \. \. \#]
+                     [\# \[ \] \. \#]
+                     [\# \. \[ \] \#]
+                     [\# \[ \] \. \#]
+                     [\# \. \. \. \#]
+                     [\# \# \# \# \#]]
+          grid       (d15/set-at-pos grid-base [2 5] \@)
+          grid-zip   (d15/create-grid-zipper grid d15/move-up-char [2 5])
+
+          grid-1     (d15/set-at-pos grid-base [1 5] \@)
+          grid-zip-1 (d15/create-grid-zipper grid-1 d15/move-up-char [1 5])
+
+          grid-2     (d15/set-at-pos grid-base [1 1] \@)
+          grid-zip-2 (d15/create-grid-zipper grid-2 d15/move-up-char [1 1])
+
+          grid-3     (d15/set-at-pos grid-base [1 3] \@)
+          grid-zip-3 (d15/create-grid-zipper grid-3 d15/move-up-char [1 3])
+      
+          grid-4     (d15/set-at-pos grid-base [2 1] \@)
+          grid-zip-4 (d15/create-grid-zipper grid-4 d15/move-down-char [2 1])]
+
+
+      (is (= [[2 5] [2 4] [2 3] [2 2] [1 2] [3 3] [1 4]] (d15/get-connected-tiles grid-zip)))
+      (is (= [[2 2] [1 2] [3 3] [1 4]]                   (d15/get-leaves-tiles grid-zip)))
+
+      (is (= [[1 5] [1 4] [2 4] [2 3] [2 2] [1 2] [3 3]] (d15/get-connected-tiles grid-zip-1)))
+      (is (= [[1 4] [2 2] [1 2] [3 3]]                   (d15/get-leaves-tiles grid-zip-1)))
+
+      ;; when robot is not close to box
+      (is (= [[1 1]]                                     (d15/get-connected-tiles grid-zip-2)))
+      (is (= [[1 1]]                                     (d15/get-leaves-tiles grid-zip-2)))
+
+      (is (= [[1 3] [1 2] [2 2]]                         (d15/get-connected-tiles grid-zip-3)))
+      (is (= [[1 2] [2 2]]                               (d15/get-leaves-tiles grid-zip-3)))
+
+      ;; going down
+      (is (= [[2 1] [2 2] [2 3] [2 4] [1 4] [3 3] [1 2]] (d15/get-connected-tiles grid-zip-4)))
+      (is (= [[2 4] [1 4] [3 3] [1 2]]                   (d15/get-leaves-tiles grid-zip-4)))
+      
+;;      
+      ))) 

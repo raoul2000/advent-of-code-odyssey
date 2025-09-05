@@ -342,11 +342,11 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
                (= at-next-pos \]))  [[next-x next-y] [(dec next-x) next-y]]
           :else [[next-x next-y]]))))
 
-  ((create-fn-children grid1 dec) [7 5]) 
+  ((create-fn-children grid1 dec) [7 5])
 
   (def branch?   (create-fn-branch? grid1 dec))
   (def children  (create-fn-children grid1 dec))
-  (def make-node (fn [_ c] 
+  (def make-node (fn [_ c]
                    (tap> {:make-node [_ c]})
                    c))
 
@@ -357,7 +357,7 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
       z/down
       z/down
       z/node)
-  
+
   ;; but automatic navigation is better 
   ;; see https://grishaev.me/en/clojure-zippers/
 
@@ -365,17 +365,68 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
     (->> zipper
          (iterate z/next)
          (take-while (complement z/end?))))
-  
+
   ;; returns all nodes
   (->> zp
        iter-zip
        (map z/node))
-  
+
   ;; returns only leaves (remove branches)
   (->> zp
        iter-zip
        (remove z/branch?)
        (map z/node))
 
+  ;; semmes good. Let's put that in the code
+  ;; and do some more tests to ensure it is working as expected.
+
   ;;
   )
+
+(defn create-fn-branch? [grid dy]
+  (fn [node]
+    (let [[x y]       node
+          next-pos    [x (dy y)]
+          at-next-pos (get-at-pos grid next-pos)]
+      (or (= \[ at-next-pos)
+          (= \] at-next-pos)))))
+
+(defn create-fn-children [grid dy]
+  (fn [branch-node]
+    (let [[x y]            branch-node
+          at-pos           (get-at-pos grid [x y])
+          [next-x next-y]  [x (dy y)]
+          at-next-pos      (get-at-pos grid [next-x next-y])]
+      (cond
+        (and (= at-pos \[)
+             (= at-next-pos \]))  [[next-x next-y] [(dec next-x) next-y]]
+        (and (= at-pos \])
+             (= at-next-pos \[))  [[next-x next-y] [(inc next-x) next-y]]
+        (and (= at-pos \@)
+             (= at-next-pos \[))  [[next-x next-y] [(inc next-x) next-y]]
+        (and (= at-pos \@)
+             (= at-next-pos \]))  [[next-x next-y] [(dec next-x) next-y]]
+        :else [[next-x next-y]]))))
+
+(defn iter-zip [zipper]
+  (->> zipper
+       (iterate z/next)
+       (take-while (complement z/end?))))
+
+(defn create-grid-zipper [grid horizontal-move-char root]
+  (let [dy-fn     (if (= horizontal-move-char move-up-char) dec inc)
+        branch?   (create-fn-branch?  grid dy-fn)
+        children  (create-fn-children grid dy-fn)
+        make-node (fn [_ c] c)]
+    (z/zipper branch? children make-node root)))
+
+(defn get-connected-tiles [grid-zipper]
+  (->> grid-zipper
+       iter-zip
+       (map z/node)))
+
+(defn get-leaves-tiles [grid-zipper]
+  (->> grid-zipper
+       iter-zip
+       (remove z/branch?)
+       (map z/node)))
