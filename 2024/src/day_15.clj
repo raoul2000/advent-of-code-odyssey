@@ -309,20 +309,24 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
 (comment
   (def grid (expand-grid (:grid (parse-input sample-input))))
   (def robot-pos (find-robot-pos grid))
+  (def grid1 (-> grid
+                 (set-at-pos robot-pos \.)
+                 (set-at-pos [7 5] \@)))
 
   (defn create-fn-branch? [grid dy]
     (fn [node]
+      (tap> {:create-fn-branch node})
       (let [[x y]       node
             next-pos    [x (dy y)]
             at-next-pos (get-at-pos grid next-pos)]
-        (prn at-next-pos)
         (or (= \[ at-next-pos)
             (= \] at-next-pos)))))
 
-  ((create-fn-branch? grid dec) [7 4])
+  ((create-fn-branch? grid1 dec) [7 5])
 
   (defn create-fn-children [grid dy]
     (fn [branch-node]
+      (tap> {:create-fn-children branch-node})
       (let [[x y]            branch-node
             at-pos           (get-at-pos grid [x y])
             [next-x next-y]  [x (dy y)]
@@ -332,18 +336,46 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
                (= at-next-pos \]))  [[next-x next-y] [(dec next-x) next-y]]
           (and (= at-pos \])
                (= at-next-pos \[))  [[next-x next-y] [(inc next-x) next-y]]
+          (and (= at-pos \@)
+               (= at-next-pos \[))  [[next-x next-y] [(inc next-x) next-y]]
+          (and (= at-pos \@)
+               (= at-next-pos \]))  [[next-x next-y] [(dec next-x) next-y]]
           :else [[next-x next-y]]))))
 
-  (defn make-node [node children-seq]
-    {:pos node
-     :children children-seq})
+  ((create-fn-children grid1 dec) [7 5]) 
 
-  (def  zp (z/zipper
-            (create-fn-branch? grid dec) 
-            (create-fn-children grid dec) 
-            make-node 
-            (make-node [7 5] [])))
+  (def branch?   (create-fn-branch? grid1 dec))
+  (def children  (create-fn-children grid1 dec))
+  (def make-node (fn [_ c] 
+                   (tap> {:make-node [_ c]})
+                   c))
+
+  (def  zp (z/zipper branch? children make-node [7 5]))
+
+  ;; manual navigation ...
   (-> zp
-      z/down)
+      z/down
+      z/down
+      z/node)
+  
+  ;; but automatic navigation is better 
+  ;; see https://grishaev.me/en/clojure-zippers/
+
+  (defn iter-zip [zipper]
+    (->> zipper
+         (iterate z/next)
+         (take-while (complement z/end?))))
+  
+  ;; returns all nodes
+  (->> zp
+       iter-zip
+       (map z/node))
+  
+  ;; returns only leaves (remove branches)
+  (->> zp
+       iter-zip
+       (remove z/branch?)
+       (map z/node))
+
   ;;
   )
