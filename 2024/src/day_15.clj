@@ -447,4 +447,36 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
          (map #(get-at-pos grid %))
          (every? #(= \. %)))))
 
-(defn update-on-vertical-move [grid pos vertical-move-char])
+
+(defn update-on-vertical-move
+  "Move the tile `tile-char` at position `[x y]` vetically apply the `dy-fn` function on
+   y in the given `grid` and returns the modified grid after move."
+  [grid [[x y] tile-char] dy-fn]
+  (-> grid
+      (set-at-pos [x (dy-fn y)] tile-char)
+      (set-at-pos [x y]         space-char)))
+
+(defn move-veritcal [grid move-char]
+  (let [dy-fn           (create-vertical-translate-fn move-char)
+        grid-zipper     (create-grid-zipper grid move-char (find-robot-pos grid))
+        connected-tiles (get-connected-tiles grid-zipper)
+        edge-boxes      (get-leaves-tiles grid-zipper)]
+    (if-not (vertical-move-possible? grid move-char edge-boxes)
+      grid
+      (->> connected-tiles
+           ;; add char at pos as last (ex: [[x y] char])
+           (map #(conj [%] (get-at-pos grid %)))
+           ;; update grid
+           (reduce (fn [acc cur]
+                     (update-on-vertical-move acc cur dy-fn)) grid)))))
+
+(comment
+
+  (conj [[1 2]] 3)
+
+  (conj [1 2] 3)
+  (print-grid (expand-grid (:grid (parse-input sample-input))))
+  (def grid (expand-grid (:grid (parse-input sample-input))))
+  (move-veritcal grid move-up-char)
+  ;;
+  )
