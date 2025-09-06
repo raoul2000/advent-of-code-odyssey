@@ -182,7 +182,7 @@
 
           grid-3     (d15/set-at-pos grid-base [1 3] \@)
           grid-zip-3 (d15/create-grid-zipper grid-3 d15/move-up-char [1 3])
-      
+
           grid-4     (d15/set-at-pos grid-base [2 1] \@)
           grid-zip-4 (d15/create-grid-zipper grid-4 d15/move-down-char [2 1])]
 
@@ -203,6 +203,29 @@
       ;; going down
       (is (= [[2 1] [2 2] [2 3] [2 4] [1 4] [3 3] [1 2]] (d15/get-connected-tiles grid-zip-4)))
       (is (= [[2 4] [1 4] [3 3] [1 2]]                   (d15/get-leaves-tiles grid-zip-4)))
-      
-;;      
+      ;;      
+      )))
+
+(deftest vertical-move-possible-test
+  (testing "Test vertical move possible"
+    (let [grid   [[\# \# \# \# \#]
+                  [\# \. \. \. \#]
+                  [\# \[ \] \. \#]
+                  [\# \. \[ \] \#]
+                  [\# \[ \] \. \#]
+                  [\# \. \. \. \#]
+                  [\# \# \# \# \#]]]
+      ;; moving up
+      (is (d15/vertical-move-possible? grid d15/move-up-char [[1 2] [2 2] [3 3] [1 4]]))
+      (is (d15/vertical-move-possible? grid d15/move-up-char [[1 2]]))
+      (is (not (d15/vertical-move-possible? grid d15/move-up-char [[1 1]])))
+      (is (not (d15/vertical-move-possible? grid d15/move-up-char [[1 2] [2 3]])))
+
+      ;; moving down
+      (is (d15/vertical-move-possible? grid d15/move-down-char [[1 2] [3 3] [1 4]]))
+      (is (d15/vertical-move-possible? grid d15/move-down-char [[1 4]]))
+      (is (not (d15/vertical-move-possible? grid d15/move-down-char [[1 5]])))
+      (is (not (d15/vertical-move-possible? grid d15/move-down-char [[1 2] [3 3] [1 4] [1 5]])))
+
+      ;;
       ))) 

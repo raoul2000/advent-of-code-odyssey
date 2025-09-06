@@ -377,7 +377,7 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
        (remove z/branch?)
        (map z/node))
 
-  ;; semmes good. Let's put that in the code
+  ;; seems good. Let's put that in the code
   ;; and do some more tests to ensure it is working as expected.
 
   ;;
@@ -408,13 +408,16 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
              (= at-next-pos \]))  [[next-x next-y] [(dec next-x) next-y]]
         :else [[next-x next-y]]))))
 
+(defn create-vertical-translate-fn [vertical-move-char]
+  (if (= vertical-move-char move-up-char) dec inc))
+
 (defn iter-zip [zipper]
   (->> zipper
        (iterate z/next)
        (take-while (complement z/end?))))
 
-(defn create-grid-zipper [grid horizontal-move-char root]
-  (let [dy-fn     (if (= horizontal-move-char move-up-char) dec inc)
+(defn create-grid-zipper [grid vertical-move-char root]
+  (let [dy-fn     (create-vertical-translate-fn vertical-move-char)
         branch?   (create-fn-branch?  grid dy-fn)
         children  (create-fn-children grid dy-fn)
         make-node (fn [_ c] c)]
@@ -430,3 +433,18 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
        iter-zip
        (remove z/branch?)
        (map z/node)))
+
+;; So now, for a given vertical move, we can get the list of all tiles involved (so called 'connected tiles') 
+;; and among them, the ones that are at the edge.
+
+;; To find out if a vetical move is possible, all edges pos must be before a space
+
+(defn vertical-move-possible? [grid vertical-move-char edge-boxes]
+  (let [dy-fn (create-vertical-translate-fn vertical-move-char)]
+    (->> edge-boxes
+         (map (fn [[x y]]
+                [x (dy-fn y)]))
+         (map #(get-at-pos grid %))
+         (every? #(= \. %)))))
+
+(defn update-on-vertical-move [grid pos vertical-move-char])
