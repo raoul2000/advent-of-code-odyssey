@@ -447,6 +447,16 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
          (map #(get-at-pos grid %))
          (every? #(= \. %)))))
 
+(comment
+  (sort [4 3 2 7 5 3 8])
+
+  (sort-by identity (fn [[x1 y1] [x2 y2]]
+                      (if (not= x1 x2)
+                        (< x1 x2)
+                        (< y1 y2))) [[2 2] [1 2] [1 1] [2 1] [3 1]])
+
+  ;;
+  )
 
 (defn update-on-vertical-move
   "Move the tile `tile-char` at position `[x y]` vetically apply the `dy-fn` function on
@@ -456,27 +466,32 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
       (set-at-pos [x (dy-fn y)] tile-char)
       (set-at-pos [x y]         space-char)))
 
-(defn move-veritcal [grid move-char]
-  (let [dy-fn           (create-vertical-translate-fn move-char)
-        grid-zipper     (create-grid-zipper grid move-char (find-robot-pos grid))
-        connected-tiles (get-connected-tiles grid-zipper)
-        edge-boxes      (get-leaves-tiles grid-zipper)]
-    (if-not (vertical-move-possible? grid move-char edge-boxes)
+;; To be able to update the grid by iterating over connected tiles, we must ensure
+;; that they are sorted (to avoid overwrite)
+
+(defn sort-connected-tiles
+  "Sorted connected-tiles pos in a suitable way for being updated in sequence"
+  [move-char connected-tiles]
+  (let [sorted (sort-by identity (fn [[x1 y1] [x2 y2]]
+                                   (if (not= x1 x2)
+                                     (< x1 x2)
+                                     (< y1 y2))) connected-tiles)]
+    (if (= move-char move-down-char)
+      (reverse sorted)
+      sorted)))
+
+(defn move-veritcal
+  "Apply vertical move `move-char` on the given `grid` and returns the modified grid."
+  [grid move-char]
+  (let [dy-fn        (create-vertical-translate-fn move-char)
+        grid-zipper  (create-grid-zipper grid move-char (find-robot-pos grid))]
+    (if-not (vertical-move-possible? grid move-char (get-leaves-tiles grid-zipper))
       grid
-      (->> connected-tiles
+      (->> (get-connected-tiles grid-zipper)
+           (sort-connected-tiles move-char)
            ;; add char at pos as last (ex: [[x y] char])
            (map #(conj [%] (get-at-pos grid %)))
            ;; update grid
            (reduce (fn [acc cur]
                      (update-on-vertical-move acc cur dy-fn)) grid)))))
 
-(comment
-
-  (conj [[1 2]] 3)
-
-  (conj [1 2] 3)
-  (print-grid (expand-grid (:grid (parse-input sample-input))))
-  (def grid (expand-grid (:grid (parse-input sample-input))))
-  (move-veritcal grid move-up-char)
-  ;;
-  )
