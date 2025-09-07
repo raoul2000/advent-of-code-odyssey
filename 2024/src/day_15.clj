@@ -447,16 +447,6 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
          (map #(get-at-pos grid %))
          (every? #(= \. %)))))
 
-(comment
-  (sort [4 3 2 7 5 3 8])
-
-  (sort-by identity (fn [[x1 y1] [x2 y2]]
-                      (if (not= x1 x2)
-                        (< x1 x2)
-                        (< y1 y2))) [[2 2] [1 2] [1 1] [2 1] [3 1]])
-
-  ;;
-  )
 
 (defn update-on-vertical-move
   "Move the tile `tile-char` at position `[x y]` vetically apply the `dy-fn` function on
@@ -520,6 +510,54 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
         (update :grid  move-fn (first moves))
         (update :moves rest))))
 
+;; Last is to compute the final score. For this we can reuse this function from part 1
+;; with small change
+
+(defn find-all-box-pos-2
+  "Find and returns a seq of [x y] position of the left part of boxes in the given grid"
+  [grid]
+  (let [[col-count line-count] (grid-size grid)]
+    (filter #(= \[ (get-at-pos grid %)) (for [x (range 0 col-count)
+                                              y (range 0 line-count)]
+                                          [x y]))))
+
+;; The rule says : "distances are measured from the edge of the map to the closest edge of the box in question"
+;; and this is a change from part 1. Let's reuse function compute-final-score from part 1 but the 'x' coordinate
+;; must be the one of the box edge (left or right) that is closest from the edge
+
+;; example :
+;; #...[]..# : (nb col = 9)
+;;   - left part  = [4 0] - dist from left  = 4
+;;   - right part = [5 0] - dist from right = 3 = ((9 - 1) - (4+1))
+;;   => winner is right part with a dist of 3
+
+;; #...[]...# : (nb col = 10)
+;;   - left part  = [4 0] - dist from left = 4
+;;   - right part = [5 0] - dist from right = 4 = ((10 - 1) - (4+1))
+;;   => draw ! dist is 4
+
+;; #...[]....# : (nb col = 11)
+;;   - left part  = [4 0] - dist from left = 4
+;;   - right part = [5 0] - dist from right = 5 ((11-1) - (4+1))
+;;   => winner is left part with dist 4
+
+(defn closest-dist [nb-col left-x]
+  (let [right-x       (inc left-x)
+        dist-to-left  left-x
+        dist-to-right (- (dec nb-col) right-x)]
+    (min dist-to-left dist-to-right)))
+
+;; Nooooo !! forget it ! 😟
+;; I've tested with this algo but the result is not correct. Maybe I have misinterpreted the
+;; GPS computation rules.
+
+
+(defn compute-final-score-2 [grid]
+  (->>
+   (find-all-box-pos-2 grid)
+   (reduce (fn [acc [x y]]
+             (+ acc (+ x (* 100 y)))) 0)))
+
 (defn solution-2 [input]
   (->>
    (parse-input-2 input)
@@ -527,11 +565,17 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
    (drop-while #(seq (:moves %)))
    first
    :grid
-   #_(compute-final-score)))
+   (compute-final-score-2)))
 
 (comment
 
-  (print-grid (solution-2 sample-input))
-  (print-grid (solution-2 puzzle-input))
+  ;; sample input ?
+  (solution-2 sample-input)
+  ;; => 9021 ok .. it smells good
+
+
+  ;; ... and now with puzzle input
+  (solution-2 puzzle-input)
+  ;; => 1527969 yessss ... we have a winner ⭐⭐
   ;;
   )
