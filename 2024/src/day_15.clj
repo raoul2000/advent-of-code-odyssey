@@ -495,3 +495,43 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
            (reduce (fn [acc cur]
                      (update-on-vertical-move acc cur dy-fn)) grid)))))
 
+;; we can now apply all moves and see what the resulting grid looks like
+;; Let's use the same kind of functions than part 1
+
+(defn parse-input-2
+  "Parse and load input into a map. This map contains following keys : 
+   
+   - `:grid` : vector of vector representing the expanded grid
+   - `:moves` : seq of move characters"
+  [input]
+  (let [[grid-str _separator moves-str] (partition-by #(= % "") (s/split-lines input))]
+    {:grid  (expand-grid (parse-grid grid-str))
+     :moves (parse-moves moves-str)}))
+
+(defn apply-move
+  "Given the current grid and move seq state, apply the first move and returns
+   the updated grid,  and the rest of moves. Robot position may also be updated if 
+   theattemps succeeded."
+  [{:keys [moves _grid] :as state}]
+  (let [move-fn        (if (#{move-down-char move-up-char} (first moves))
+                         move-veritcal
+                         move-horizontal)]
+    (-> state
+        (update :grid  move-fn (first moves))
+        (update :moves rest))))
+
+(defn solution-2 [input]
+  (->>
+   (parse-input-2 input)
+   (iterate apply-move)
+   (drop-while #(seq (:moves %)))
+   first
+   :grid
+   #_(compute-final-score)))
+
+(comment
+
+  (print-grid (solution-2 sample-input))
+  (print-grid (solution-2 puzzle-input))
+  ;;
+  )
