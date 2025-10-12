@@ -7,6 +7,6 @@ As you'll see, I could never reach the end of this journey, but I surely did my 
 - [2021](./2021/) : reached step 14
 - [2022](./2022/) : reached step 11
 - [2023](./2023/) : reached step 10
-- [2024](./2024/) : reached step ... who knows ?
+- [2024](./2024/) : reached step 15 🏆
 
 **SPOILER ALERT: source code may contains puzzle solutions (hopefully)**
