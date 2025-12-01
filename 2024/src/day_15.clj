@@ -1,5 +1,6 @@
 (ns day-15
-  (:require [clojure.string :as s]))
+  (:require [clojure.string :as s]
+            [clojure.zip :as z]))
 
 ;; https://adventofcode.com/2024/day/15
 
@@ -193,5 +194,388 @@ v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
 
   (solution-1 puzzle-input)
   ;; ... 1516281 ⭐
+  ;;
+  )
+
+
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; grid expands
+;; - double width (col count)
+;; - same height (line count)
+;;
+;; example : 
+;; - before
+;; ##########
+;; #..O..O.O#
+;; #......O.#
+;; #.OO..O.O#
+;; #..O@..O.#
+;; #O#..O...#
+;; #O..O..O.#
+;; #.OO.O.OO#
+;; #....O...#
+;; ##########
+;;
+;; - after
+;; ####################
+;; ##....[]....[]..[]##
+;; ##............[]..##
+;; ##..[][]....[]..[]##
+;; ##....[]@.....[]..##
+;; ##[]##....[]......##
+;; ##[]....[]....[]..##
+;; ##..[][]..[]..[][]##
+;; ##........[]......##
+;; ####################
+;; 
+;;
+
+(defn expand-line [line]
+  (->> line
+       (map (fn [tile] (case tile
+                         \# [\# \#]
+                         \. [\. \.]
+                         \O [\[ \]]
+                         \@ [\@ \.])))
+       flatten
+       vec))
+
+(defn expand-grid [grid]
+  (mapv expand-line grid))
+
+(comment
+  (print-grid (:grid (parse-input sample-input)))
+  (print-grid (expand-grid (:grid (parse-input sample-input))))
+  ;;
+  )
+
+;; moving
+;;
+;; Logic to handle moves, differs from part 1.
+;; We can distinguish 2 patterns : 
+;; - moving horizontal (left or right) - a priori easy
+;; - moving vertical (up or down) - muuuch more tricky
+;;
+;; Moving horizontal
+;; - to test if the move is possible, just scan the line
+;; - changes ONLY the line where the robot is located
+;; - boxes are made of unbreakable character pairs : "[]"
+;; Moving vertical
+;; - to scan if the move is possible .... build graph and check all leaves ?
+;; - affect several cols (because box is 2 tiles width)
+
+;; Unlike part 1, we are going to use regexp for the easy one (the horizontal moves)
+
+(defn update-line-on-horizontal-move
+  "Apply horizontal move `move-char` to the given grid line and returns it modified if the move is possible.
+   The given `line` is a vec of chars."
+  [line move-char]
+  (let [order-fn (if (= move-char move-right-char) identity (comp vec reverse))
+        line-str (apply str (order-fn line))]
+    (if-let [[_ before-robot after-robot after-space] (re-matches #"(.*)@([\[\]]*)\.(.+)" line-str)]
+      (->> (str before-robot ".@" after-robot after-space)
+           vec
+           order-fn)
+      line)))
+
+(defn move-horizontal
+  "Apply the horizontal move `move-char` to the given `grid` and returns
+   the new grid. When the move is not possible, returns the same grid."
+  [grid move-char]
+  (let [[_robot-pos-x robot-pos-y]  (find-robot-pos grid)]
+    (update grid robot-pos-y update-line-on-horizontal-move move-char)))
+
+;; Now the vertical move is more tricky
+
+;; - before
+;; ####################
+;; ##....[]....[]..[]##
+;; ##..[]..[]....[]..##
+;; ##...[][]...[]..[]##
+;; ##....[]......[]..##
+;; ##[]##.@..[]......##
+;; ####################
+;; - after
+;; ####################
+;; ##..[][][]..[]..[]##
+;; ##...[][].....[]..##
+;; ##....[]....[]..[]##
+;; ##.....@......[]..##
+;; ##[]##....[]......##
+;; ####################
+
+;; We see a tree structure and so, a zipper could be the way to go
+
+(comment
+  (def grid (expand-grid (:grid (parse-input sample-input))))
+  (def robot-pos (find-robot-pos grid))
+  (def grid1 (-> grid
+                 (set-at-pos robot-pos \.)
+                 (set-at-pos [7 5] \@)))
+
+  (defn create-fn-branch? [grid dy]
+    (fn [node]
+      (tap> {:create-fn-branch node})
+      (let [[x y]       node
+            next-pos    [x (dy y)]
+            at-next-pos (get-at-pos grid next-pos)]
+        (or (= \[ at-next-pos)
+            (= \] at-next-pos)))))
+
+  ((create-fn-branch? grid1 dec) [7 5])
+
+  (defn create-fn-children [grid dy]
+    (fn [branch-node]
+      (tap> {:create-fn-children branch-node})
+      (let [[x y]            branch-node
+            at-pos           (get-at-pos grid [x y])
+            [next-x next-y]  [x (dy y)]
+            at-next-pos      (get-at-pos grid [next-x next-y])]
+        (cond
+          (and (= at-pos \[)
+               (= at-next-pos \]))  [[next-x next-y] [(dec next-x) next-y]]
+          (and (= at-pos \])
+               (= at-next-pos \[))  [[next-x next-y] [(inc next-x) next-y]]
+          (and (= at-pos \@)
+               (= at-next-pos \[))  [[next-x next-y] [(inc next-x) next-y]]
+          (and (= at-pos \@)
+               (= at-next-pos \]))  [[next-x next-y] [(dec next-x) next-y]]
+          :else [[next-x next-y]]))))
+
+  ((create-fn-children grid1 dec) [7 5])
+
+  (def branch?   (create-fn-branch? grid1 dec))
+  (def children  (create-fn-children grid1 dec))
+  (def make-node (fn [_ c]
+                   (tap> {:make-node [_ c]})
+                   c))
+
+  (def  zp (z/zipper branch? children make-node [7 5]))
+
+  ;; manual navigation ...
+  (-> zp
+      z/down
+      z/down
+      z/node)
+
+  ;; but automatic navigation is better 
+  ;; see https://grishaev.me/en/clojure-zippers/
+
+  (defn iter-zip [zipper]
+    (->> zipper
+         (iterate z/next)
+         (take-while (complement z/end?))))
+
+  ;; returns all nodes
+  (->> zp
+       iter-zip
+       (map z/node))
+
+  ;; returns only leaves (remove branches)
+  (->> zp
+       iter-zip
+       (remove z/branch?)
+       (map z/node))
+
+  ;; seems good. Let's put that in the code
+  ;; and do some more tests to ensure it is working as expected.
+
+  ;;
+  )
+
+(defn create-fn-branch? [grid dy]
+  (fn [node]
+    (let [[x y]       node
+          next-pos    [x (dy y)]
+          at-next-pos (get-at-pos grid next-pos)]
+      (or (= \[ at-next-pos)
+          (= \] at-next-pos)))))
+
+(defn create-fn-children [grid dy]
+  (fn [branch-node]
+    (let [[x y]            branch-node
+          at-pos           (get-at-pos grid [x y])
+          [next-x next-y]  [x (dy y)]
+          at-next-pos      (get-at-pos grid [next-x next-y])]
+      (cond
+        (and (= at-pos \[)
+             (= at-next-pos \]))  [[next-x next-y] [(dec next-x) next-y]]
+        (and (= at-pos \])
+             (= at-next-pos \[))  [[next-x next-y] [(inc next-x) next-y]]
+        (and (= at-pos \@)
+             (= at-next-pos \[))  [[next-x next-y] [(inc next-x) next-y]]
+        (and (= at-pos \@)
+             (= at-next-pos \]))  [[next-x next-y] [(dec next-x) next-y]]
+        :else [[next-x next-y]]))))
+
+(defn create-vertical-translate-fn [vertical-move-char]
+  (if (= vertical-move-char move-up-char) dec inc))
+
+(defn iter-zip [zipper]
+  (->> zipper
+       (iterate z/next)
+       (take-while (complement z/end?))))
+
+(defn create-grid-zipper [grid vertical-move-char root]
+  (let [dy-fn     (create-vertical-translate-fn vertical-move-char)
+        branch?   (create-fn-branch?  grid dy-fn)
+        children  (create-fn-children grid dy-fn)
+        make-node (fn [_ c] c)]
+    (z/zipper branch? children make-node root)))
+
+(defn get-connected-tiles [grid-zipper]
+  (->> grid-zipper
+       iter-zip
+       (map z/node)))
+
+(defn get-leaves-tiles [grid-zipper]
+  (->> grid-zipper
+       iter-zip
+       (remove z/branch?)
+       (map z/node)))
+
+;; So now, for a given vertical move, we can get the list of all tiles involved (so called 'connected tiles') 
+;; and among them, the ones that are at the edge.
+
+;; To find out if a vetical move is possible, all edges pos must be before a space
+
+(defn vertical-move-possible? [grid vertical-move-char edge-boxes]
+  (let [dy-fn (create-vertical-translate-fn vertical-move-char)]
+    (->> edge-boxes
+         (map (fn [[x y]]
+                [x (dy-fn y)]))
+         (map #(get-at-pos grid %))
+         (every? #(= \. %)))))
+
+
+(defn update-on-vertical-move
+  "Move the tile `tile-char` at position `[x y]` vetically apply the `dy-fn` function on
+   y in the given `grid` and returns the modified grid after move."
+  [grid [[x y] tile-char] dy-fn]
+  (-> grid
+      (set-at-pos [x (dy-fn y)] tile-char)
+      (set-at-pos [x y]         space-char)))
+
+;; To be able to update the grid by iterating over connected tiles, we must ensure
+;; that they are sorted (to avoid overwrite)
+
+(defn sort-connected-tiles
+  "Sorted connected-tiles pos in a suitable way for being updated in sequence"
+  [move-char connected-tiles]
+  (let [sorted (sort-by identity (fn [[x1 y1] [x2 y2]]
+                                   (if (not= x1 x2)
+                                     (< x1 x2)
+                                     (< y1 y2))) connected-tiles)]
+    (if (= move-char move-down-char)
+      (reverse sorted)
+      sorted)))
+
+(defn move-veritcal
+  "Apply vertical move `move-char` on the given `grid` and returns the modified grid."
+  [grid move-char]
+  (let [dy-fn        (create-vertical-translate-fn move-char)
+        grid-zipper  (create-grid-zipper grid move-char (find-robot-pos grid))]
+    (if-not (vertical-move-possible? grid move-char (get-leaves-tiles grid-zipper))
+      grid
+      (->> (get-connected-tiles grid-zipper)
+           (sort-connected-tiles move-char)
+           ;; add char at pos as last (ex: [[x y] char])
+           (map #(conj [%] (get-at-pos grid %)))
+           ;; update grid
+           (reduce (fn [acc cur]
+                     (update-on-vertical-move acc cur dy-fn)) grid)))))
+
+;; we can now apply all moves and see what the resulting grid looks like
+;; Let's use the same kind of functions than part 1
+
+(defn parse-input-2
+  "Parse and load input into a map. This map contains following keys : 
+   
+   - `:grid` : vector of vector representing the expanded grid
+   - `:moves` : seq of move characters"
+  [input]
+  (let [[grid-str _separator moves-str] (partition-by #(= % "") (s/split-lines input))]
+    {:grid  (expand-grid (parse-grid grid-str))
+     :moves (parse-moves moves-str)}))
+
+(defn apply-move
+  "Given the current grid and move seq state, apply the first move and returns
+   the updated grid,  and the rest of moves. Robot position may also be updated if 
+   theattemps succeeded."
+  [{:keys [moves _grid] :as state}]
+  (let [move-fn        (if (#{move-down-char move-up-char} (first moves))
+                         move-veritcal
+                         move-horizontal)]
+    (-> state
+        (update :grid  move-fn (first moves))
+        (update :moves rest))))
+
+;; Last is to compute the final score. For this we can reuse this function from part 1
+;; with small change
+
+(defn find-all-box-pos-2
+  "Find and returns a seq of [x y] position of the left part of boxes in the given grid"
+  [grid]
+  (let [[col-count line-count] (grid-size grid)]
+    (filter #(= \[ (get-at-pos grid %)) (for [x (range 0 col-count)
+                                              y (range 0 line-count)]
+                                          [x y]))))
+
+;; The rule says : "distances are measured from the edge of the map to the closest edge of the box in question"
+;; and this is a change from part 1. Let's reuse function compute-final-score from part 1 but the 'x' coordinate
+;; must be the one of the box edge (left or right) that is closest from the edge
+
+;; example :
+;; #...[]..# : (nb col = 9)
+;;   - left part  = [4 0] - dist from left  = 4
+;;   - right part = [5 0] - dist from right = 3 = ((9 - 1) - (4+1))
+;;   => winner is right part with a dist of 3
+
+;; #...[]...# : (nb col = 10)
+;;   - left part  = [4 0] - dist from left = 4
+;;   - right part = [5 0] - dist from right = 4 = ((10 - 1) - (4+1))
+;;   => draw ! dist is 4
+
+;; #...[]....# : (nb col = 11)
+;;   - left part  = [4 0] - dist from left = 4
+;;   - right part = [5 0] - dist from right = 5 ((11-1) - (4+1))
+;;   => winner is left part with dist 4
+
+(defn closest-dist [nb-col left-x]
+  (let [right-x       (inc left-x)
+        dist-to-left  left-x
+        dist-to-right (- (dec nb-col) right-x)]
+    (min dist-to-left dist-to-right)))
+
+;; Nooooo !! forget it ! 😟
+;; I've tested with this algo but the result is not correct. Maybe I have misinterpreted the
+;; GPS computation rules.
+
+
+(defn compute-final-score-2 [grid]
+  (->>
+   (find-all-box-pos-2 grid)
+   (reduce (fn [acc [x y]]
+             (+ acc (+ x (* 100 y)))) 0)))
+
+(defn solution-2 [input]
+  (->>
+   (parse-input-2 input)
+   (iterate apply-move)
+   (drop-while #(seq (:moves %)))
+   first
+   :grid
+   (compute-final-score-2)))
+
+(comment
+
+  ;; sample input ?
+  (solution-2 sample-input)
+  ;; => 9021 ok .. it smells good
+
+
+  ;; ... and now with puzzle input
+  (solution-2 puzzle-input)
+  ;; => 1527969 yessss ... we have a winner ⭐⭐
   ;;
   )
