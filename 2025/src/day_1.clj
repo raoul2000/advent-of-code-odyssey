@@ -40,7 +40,7 @@ L82
               (re-matches #"(.)(.+)" %)
               ((juxt second (fn [s] (-> s last Integer/parseInt))))))))
 
-(defn apply-rotation 
+(defn apply-rotation
   "Compute and returns the new dial value."
   [[direction distance] dial-num]
   (if (zero? distance)
@@ -74,3 +74,34 @@ L82
 ;; => when the distance is greater then the distance between the current dial and the position of zero in the direction
 ;;    specified by the rotation
 ;; => when the distance is greater than 99
+
+(defn cross-zero-count [[direction distance] dial-num]
+  (if (zero? distance)
+    0
+    (let [distance-to-zero (if (= "L" direction) dial-num (- 100 dial-num))]
+      (if (>=  distance-to-zero distance)
+        0
+        (let [full-loop-count (quot distance 100)
+              remain-distance (mod distance 100)
+              ]
+          (+ (* full-loop-count 1)
+             
+             )
+          )
+        1))))
+
+(comment
+  (quot 50 100)
+  (quot 100 100)
+  (quot 120 100)
+  (quot 220 100)
+  (mod 100 100)
+  (mod 150 100)
+  ;;
+  )
+
+(comment
+  (defn dial)
+  ;;
+  )
+
