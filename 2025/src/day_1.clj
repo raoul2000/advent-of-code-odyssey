@@ -65,3 +65,12 @@ L82
   ;;
   )
 
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; you're actually supposed to count the number of times any click causes the dial to point at 0, regardless of whether 
+;; it happens during a rotation or at the end of one.
+
+;; When does a rotation crosses a zero ? 
+;; => when the distance is greater then the distance between the current dial and the position of zero in the direction
+;;    specified by the rotation
+;; => when the distance is greater than 99
