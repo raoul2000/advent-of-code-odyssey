@@ -58,5 +58,38 @@
   )
 
 
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Now, an ID is invalid if it is made only of some sequence of digits repeated at least twice. 
+;; So, 12341234 (1234 two times), 123123123 (123 three times), 1212121212 (12 five times), and 1111111 (1 seven times) 
+;; are all invalid IDs.
+
+(defn solution-2 [input]
+  (->> (apply concat (->> (s/split input #",")
+                          ;; pairs of string
+                          (map #(s/split % #"-"))
+                          ;; pairs of integers
+                          #_(map #(vector (Integer/parseInt (first %)) (Integer/parseInt (second %))))
+                          (map #(vector (bigint (first %)) (bigint (second %))))
+                          ;; to ranges
+                          (map #(conj (vec (apply range %)) (second %)))))
+       ;; convert to string
+       (map #(format "%s" %))
+       ;; keep patterns 
+       (filter #(re-matches #"^(\d+)((\1))+$" %))
+       ;; string -> int
+       (map #(bigint %))
+       ;; sum it all
+       (reduce +)))
 
 
+(comment
+  
+  (solution-2 sample-input)
+  ;; => 4174379265 ... okay
+  
+  (solution-2 puzzle-input)
+  ;; => 50793864718 ... ⭐⭐ 
+
+  ;;
+  )
