@@ -75,33 +75,38 @@ L82
 ;;    specified by the rotation
 ;; => when the distance is greater than 99
 
-(defn cross-zero-count [[direction distance] dial-num]
+;; using quot and mod we can get 
+;; - with quot : the distance lower than 100 to move (1 or zero)
+;; - with mod : the number of loops ... one zero cross per loop
+
+(defn apply-rotation-2 
+  "Apply given rotation to `dial-num` and returns a vector of 2 items where the first one
+   is the number of times a zero was cross or reached, and the second one is the new dial-up value."
+  [[direction distance] dial-num]
   (if (zero? distance)
-    0
-    (let [distance-to-zero (if (= "L" direction) dial-num (- 100 dial-num))]
-      (if (>=  distance-to-zero distance)
-        0
-        (let [full-loop-count (quot distance 100)
-              remain-distance (mod distance 100)
-              ]
-          (+ (* full-loop-count 1)
-             
-             )
-          )
-        1))))
+    [0 dial-num]
+    (let [distance-to-zero         (if (= "L" direction) dial-num (- 100 dial-num))
+          [loop-count steps-count] ((juxt #(quot % 100) #(mod % 100)) distance)
+          partial-cross-count      (if (or (> distance-to-zero steps-count)
+                                           (zero? distance-to-zero)) 0 1)]
+      [(+ partial-cross-count loop-count)
+       (mod ((if (= "L" direction) - +) dial-num steps-count) 100)])))
+
+(defn solution-2 [input]
+  (->> (reduce (fn [[zero-count, dial-num], rotation]
+                 (let [[cur-zero-count new-dial] (apply-rotation-2 rotation dial-num)]
+                   [(+ zero-count cur-zero-count)
+                    new-dial])) [0 50] (parse-input input))
+       first))
 
 (comment
-  (quot 50 100)
-  (quot 100 100)
-  (quot 120 100)
-  (quot 220 100)
-  (mod 100 100)
-  (mod 150 100)
-  ;;
+
+  (solution-2 sample-input)
+  ;; => 6 ... smells good
+
+  (solution-2 puzzle-input)
+  ;; => 6175 ... ⭐⭐
+  
   )
 
-(comment
-  (defn dial)
-  ;;
-  )
 

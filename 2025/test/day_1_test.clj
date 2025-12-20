@@ -37,7 +37,9 @@
       1   {:dir "R"  :dist 51 :dial 50}
       1   {:dir "L"  :dist 51 :dial 50}
       ;; more than one cross
-      1   {:dir "L"  :dist 110 :dial 1}
+      2   {:dir "L"  :dist 110 :dial 1}
+      3   {:dir "L"  :dist 210 :dial 1}
+      1   {:dir "L"  :dist 101 :dial 1}
 
 
 
