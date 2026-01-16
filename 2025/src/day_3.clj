@@ -96,3 +96,125 @@
 
   ;;
   )
+
+;; part 2 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; 12 batteries instead of 2
+
+;; Here is an idea for a solution : 
+;;
+;;
+;; bank : 818181911112111 (len = 15)
+;; result : ""
+;;     - len bank - (12 - len result) = 3
+;;     - bag = 8 1 8
+;;     - max = ^
+
+;; bank : .18181911112111 (len = 14)
+;; result : "8" (len = 1)
+;;     - len bank - (12 - len result) = 14 - 11 = 3
+;;     - bag = 1 8 1
+;;     - max =   ^
+
+;; bank : ...181911112111 (len = 12)
+;; result : "88"
+;;     - len bank - (12 - len result) = 12 - 10 = 2
+;;     - bag = 1 8
+;;     - max =   ^
+
+;; bank : .....1911112111 (len = 11)
+;; result : "888"
+;;     - len bank - (12 - len result) = 11 - 9 = 2
+;;     - bag = 1 9
+;;     - max =   ^
+
+;; bank :  .......11112111 (len = 9)
+;; result : "8889"
+;;     - len bank - (12 - len result) = 9 - 8 = 1
+;;     - bag = 1
+;;     - max = ^
+
+;; bank :  ........1112111 (len = 8)
+;; result : "88891"
+;;     - len bank - (12 - len result) = 8 - 7 = 1
+;;     - bag = 1
+;;     - max = ^
+
+;; etc ....
+
+(comment
+
+  ;; we need a function to split a vec of integer at the position of the first
+  ;; occurence of the max value in the vec
+  
+  (defn first-max-kv-reducer [acc k v]
+    (if (or (empty? acc)
+            (> v (second acc)))
+      [k v]
+      acc))
+
+  (defn split-at-first-max
+    "Split the seq of intergers in 2 after the position of the first occurence
+     of (max v-xs).
+     
+     Example:
+     ```
+     (split-at-first-max [1 2 3 3 2 1 1])
+     => [(1 2 3) (3 2 1 1)]
+
+     (split-at-first-max [2 2 1 3])
+     => [(2 2 1 3) ()]
+     ```
+     "
+    [v-xs]
+    (let [max-idx  (->> v-xs
+                        vec
+                        (reduce-kv first-max-kv-reducer [])
+                        first)]
+      (split-at (inc max-idx) v-xs)))
+
+  (split-at-first-max [1 2 3 3 2 1 1])
+  (split-at-first-max [2 2 1 3])
+  (split-at-first-max '(2 2 1 3))
+
+  ;; now the main loop
+  (tap> "boo")
+  
+  (loop [bank [8 1 8 1 8 1 9 1 1 1 1 2 1 1 1]
+         iteration-num 1
+         result []]
+    (if (zero? (count bank))
+      result
+      (let [bank-len      (count bank)
+            result-len    (count result)
+            bag-len       (- bank-len (- 12 result-len))
+            bag           (take bag-len bank)
+            [keep re-use] (split-at-first-max bag)]
+        (tap> {:iteration-num iteration-num
+               :bank bank
+               :result result
+               :bag    bag 
+               :keep   keep
+               :re-use re-use})
+        (recur (-> []
+                   (into re-use)
+                   (into (drop bag-len bank)))
+               (inc iteration-num)
+               (conj result (last keep))))))
+
+  (last ())
+  (conj [1] '())
+  (conj [1] nil)
+  (vec (take 2 [1 2 3]))
+  (-> []
+      (into [3 4])
+      (into [5 6]))
+  (into [1 2] '(3 4))
+
+  (take 2 [1 2 3])
+  (conj [] 1)
+
+  ;;
+  )
+
+
